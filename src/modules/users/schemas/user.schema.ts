@@ -34,5 +34,20 @@ export class User extends Document {
 
   @Prop()
   lastLogin: Date;
+
+  @Prop({ default: false })
+  isActive: boolean;
+
+  @Prop()
+  otpCode: string;
+
+  @Prop()
+  otpExpiresAt: Date;
+
+  @Prop()
+  resetPasswordToken: string;
+
+  @Prop()
+  resetPasswordExpires: Date;
 }
 export const UserSchema = SchemaFactory.createForClass(User);

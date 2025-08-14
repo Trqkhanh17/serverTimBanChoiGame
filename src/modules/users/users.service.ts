@@ -3,7 +3,7 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from 'src/modules/users/schemas/user.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
-import { hashPasswordHelper } from '@/helpers/ulti';
+import { hashPasswordHelper } from '@/common/helpers/ulti';
 
 @Injectable()
 export class UsersService {
@@ -44,6 +44,11 @@ export class UsersService {
       name,
     });
     if (!user) throw new BadRequestException();
+    return user;
+  }
+  async getProfileUser(email: string): Promise<UserDocument | null> {
+    const user = this.findUserByEmail(email);
+    if (!user) return null;
     return user;
   }
 }
