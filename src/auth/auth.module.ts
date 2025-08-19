@@ -8,7 +8,6 @@ import { PassportModule } from '@nestjs/passport';
 import { LocalStrategy } from '@/auth/passport/strategies/local.strategy';
 import { JwtStrategy } from '@/auth/passport/strategies/jwt.strategy';
 import { JwtRefreshStrategy } from '@/auth/passport/strategies/jwt-refresh.strategy';
-import { JwtResetPasswordStrategy } from '@/auth/passport/strategies/jwt-reset-password.strategy';
 
 @Module({
   imports: [
@@ -27,13 +26,7 @@ import { JwtResetPasswordStrategy } from '@/auth/passport/strategies/jwt-reset-p
     PassportModule,
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    LocalStrategy,
-    JwtStrategy,
-    JwtRefreshStrategy,
-    JwtResetPasswordStrategy,
-  ],
+  providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}

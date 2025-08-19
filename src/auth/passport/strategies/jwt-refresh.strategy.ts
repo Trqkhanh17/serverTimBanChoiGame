@@ -12,7 +12,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
     const jwtSecret = configService.get<string>('REFRESH_JWT_SECRET');
     if (!jwtSecret) throw new Error('REFRESH_JWT_SECRET is not defind');
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(), // hoặc lấy từ cookie
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       secretOrKey: jwtSecret,
       ignoreExpiration: false,
     });

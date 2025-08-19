@@ -43,11 +43,9 @@ export class User extends Document {
   otpExpiresAt: Date;
 
   @Prop()
-  resetPasswordToken: string;
-
-  @Prop()
-  resetPasswordExpires: Date;
-  @Prop()
   refreshToken: string;
+
+  @Prop({ default: false })
+  isBanned: boolean;
 }
 export const UserSchema = SchemaFactory.createForClass(User);

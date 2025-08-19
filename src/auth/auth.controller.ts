@@ -9,6 +9,7 @@ import {
   Get,
   BadGatewayException,
   Patch,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '@/modules/users/dto/create-user.dto';
@@ -18,7 +19,6 @@ import { JwtRefreshGuard } from '@/auth/passport/guards/jwt-refresh.guard';
 import { UpdateAuthDto } from '@/auth/dto/update-auth.dto';
 import { UpdateUserDto } from '@/modules/users/dto/update-user.dto';
 import { ResetPasswordDto } from '@/modules/users/dto/reset-password.user.Dto';
-import { JwtResetPasswordGuard } from '@/auth/passport/guards/jwt-reset-password.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -51,8 +51,12 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @HttpCode(201)
   async refresh(@Request() req) {
-    const user = req.user;
+    const user = await req.user;
+    const refreshToken = await req.refreshToken;
     const result = await this.authService.getUserByid(user._id);
+    const refreshTokenInDB = result.refreshToken;
+    if (refreshTokenInDB !== refreshToken)
+      throw new UnauthorizedException('không hợp lệ');
     const access_token = await this.authService.generateAccessToken(result);
     return {
       access_token,
@@ -79,12 +83,8 @@ export class AuthController {
   }
 
   @Patch('reset-password')
-  @UseGuards(JwtResetPasswordGuard)
-  async resetPassword(@Request() req, @Body() password: ResetPasswordDto) {
-    const user = req.user;
-    if (!user) throw new BadRequestException();
-    if (!password) throw new BadRequestException();
-    const result = await this.authService.resetPassword(user.email, password);
+  async resetPassword(@Body() data: ResetPasswordDto) {
+    const result = await this.authService.resetPassword(data);
     if (!result) return 'Thay đổi mật khẩu thất bại';
     return 'Thay đổi mật khẩu thành công';
   }

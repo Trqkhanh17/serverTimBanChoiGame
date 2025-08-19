@@ -20,6 +20,10 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     }
     if (!user.isActive)
       throw new BadRequestException('Tài khoản chưa được kích hoạt');
+    if (user.isBanned)
+      throw new BadRequestException(
+        'Tài khoản của bạn hiện đã bị khóa vui lòng liên hệ để biết thêm chi tiết',
+      );
     return user;
   }
 }

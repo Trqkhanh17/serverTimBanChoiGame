@@ -13,6 +13,7 @@ import { UpdateUserDto } from '@/modules/users/dto/update-user.dto';
 import { ResetPasswordDto } from '@/modules/users/dto/reset-password.user.Dto';
 import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
 import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
+import { UserDocument } from '@/common/types/user.types';
 
 @Injectable()
 export class AuthService {
@@ -40,6 +41,7 @@ export class AuthService {
       gender: user.gender,
       birthDate: user.birthDate,
       avatarUrl: user.avatarUrl,
+      isBanned: user.isBanned,
     };
     return result;
   }
@@ -81,6 +83,9 @@ export class AuthService {
   async login(user) {
     const access_token = await this.generateAccessToken(user);
     const refresh_token = await this.generateRefreshToken(user);
+    console.log('date: ', new Date());
+
+    await this.usersService.addRefreshTokenToDB(refresh_token, user.email);
     const dataUserForClient: UserResponseDto = {
       _id: user._id,
       email: user.email,
@@ -108,6 +113,12 @@ export class AuthService {
     const user = await this.usersService.createUser(data);
     const access_token = await this.generateAccessToken(user);
     const refresh_token = await this.generateRefreshToken(user);
+    const addRefreshTokenToDB = await this.usersService.addRefreshTokenToDB(
+      refresh_token,
+      user.email,
+    );
+    if (!addRefreshTokenToDB)
+      throw new BadGatewayException('đã có lỗi xảy ra khi thêm token');
     const dataForClient: UserResponseDto = {
       _id: user._id,
       email: user.email,
@@ -122,12 +133,13 @@ export class AuthService {
     };
   }
 
-  async getProfileUser(user) {
+  async getProfileUser(user: UserResponseDto) {
     const userProfile = await this.usersService.getProfileUser(user.email);
     if (!userProfile)
       throw new BadRequestException(`User có email ${user.email}`);
     return userProfile;
   }
+
   async getUserByid(sub: string) {
     const user = await this.usersService.findUserById(sub);
     if (!user) throw new BadGatewayException();
@@ -135,7 +147,6 @@ export class AuthService {
     return result;
   }
 
-  async checkRefreshToken(token: string) {}
   async updateProfileUser(email: string, body: UpdateUserDto) {
     if (!email) throw new BadRequestException();
     const user = await this.usersService.updateUserProfile(email, body);
@@ -143,9 +154,9 @@ export class AuthService {
     return user;
   }
 
-  async resetPassword(email: string, pass: ResetPasswordDto): Promise<boolean> {
-    if (!email || !pass) throw new BadRequestException();
-    const result = await this.usersService.resetPassword(email, pass);
+  async resetPassword(data: ResetPasswordDto): Promise<boolean> {
+    if (!data) throw new BadRequestException();
+    const result = await this.usersService.resetPassword(data);
     return result ? true : false;
   }
 }
