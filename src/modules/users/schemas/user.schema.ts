@@ -1,8 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-export type UserDocument = User & Document & { _id: string };
-
 @Schema({ timestamps: true })
 export class User extends Document {
   @Prop({ unique: true, required: true })
@@ -27,7 +25,7 @@ export class User extends Document {
   gender: 'male' | 'female';
 
   @Prop()
-  birthDate: Date;
+  birthDate: string;
 
   @Prop({ default: 'local' })
   authProvider: string;
@@ -49,5 +47,7 @@ export class User extends Document {
 
   @Prop()
   resetPasswordExpires: Date;
+  @Prop()
+  refreshToken: string;
 }
 export const UserSchema = SchemaFactory.createForClass(User);
