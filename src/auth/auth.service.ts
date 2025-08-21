@@ -3,6 +3,10 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  UnauthorizedException,
+  Logger,
+  InternalServerErrorException,
+  HttpException,
 } from '@nestjs/common';
 import { UsersService } from 'src/modules/users/users.service';
 import { JwtService } from '@nestjs/jwt';
@@ -13,10 +17,10 @@ import { UpdateUserDto } from '@/modules/users/dto/update-user.dto';
 import { ResetPasswordDto } from '@/modules/users/dto/reset-password.user.Dto';
 import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
 import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
-import { UserDocument } from '@/common/types/user.types';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -46,7 +50,7 @@ export class AuthService {
     return result;
   }
 
-  async generateRefreshToken(user) {
+  async generateRefreshToken(user: UserResponseDto) {
     const payLoadRefreshToken = { sub: user._id, type: 'refresh' };
     const refresh_token = await this.jwtService.signAsync(payLoadRefreshToken, {
       secret: this.configService.get<string>('REFRESH_JWT_SECRET'),
@@ -54,10 +58,27 @@ export class AuthService {
     });
     return refresh_token;
   }
-  async generateAccessToken(user) {
-    const payLoadAccessToken = { sub: user._id, email: user.email };
-    const access_token = await this.jwtService.signAsync(payLoadAccessToken);
-    return access_token;
+
+  async generateAccessToken(user: UserResponseDto, refreshToken: string) {
+    try {
+      const checkUser = await this.usersService.findUserById(user._id);
+      if (!checkUser) throw new BadRequestException();
+      const RefreshTokenInDatabase = await this.usersService.getRefreshToken(
+        user._id,
+      );
+      if (!RefreshTokenInDatabase)
+        throw new UnauthorizedException('Refresh token invalid');
+      if (refreshToken !== RefreshTokenInDatabase)
+        throw new UnauthorizedException('Refresh token invalid');
+      const payLoadAccessToken = { sub: user._id, email: user.email };
+      const access_token = await this.jwtService.signAsync(payLoadAccessToken);
+      this.logger.log('Generate access token');
+      return access_token;
+    } catch (error) {
+      this.logger.error(`Generate error access token user:${user._id}`);
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Faild to generate access token');
+    }
   }
 
   async generateRessetPasswordToken(email: string): Promise<string> {
@@ -80,63 +101,88 @@ export class AuthService {
     return reset_paswordtoken;
   }
 
-  async login(user) {
-    const access_token = await this.generateAccessToken(user);
-    const refresh_token = await this.generateRefreshToken(user);
-    console.log('date: ', new Date());
+  async login(user: UserResponseDto): Promise<AuthResponseDto | undefined> {
+    try {
+      if (!user) throw new BadRequestException();
+      const refresh_token = await this.generateRefreshToken(user);
+      await this.usersService.addRefreshTokenToDB(refresh_token, user.email);
 
-    await this.usersService.addRefreshTokenToDB(refresh_token, user.email);
-    const dataUserForClient: UserResponseDto = {
-      _id: user._id,
-      email: user.email,
-      username: user.username,
-      name: user.name,
-      avatarUrl: user.avatarUrl,
-      bio: user.bio,
-      isActive: user.isActive,
-    };
-    return {
-      access_token: access_token,
-      refresh_token: refresh_token,
-      user: dataUserForClient,
-    };
+      const access_token = await this.generateAccessToken(user, refresh_token);
+
+      const dataUserForClient: UserResponseDto = {
+        _id: user._id,
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+        bio: user.bio,
+        isActive: user.isActive,
+      };
+      this.logger.log(`Login successful: ${user.email}`);
+      return {
+        message: 'Login successful',
+        access_token: access_token,
+        refresh_token: refresh_token,
+        user: dataUserForClient,
+      };
+    } catch (error) {
+      this.logger.error(`Login failed for user ${user?.email}`, error.stack);
+      throw new InternalServerErrorException('Faild to Login');
+    }
   }
 
   async register(data: CreateUserDto): Promise<AuthResponseDto> {
-    if (!data) throw new BadRequestException('dữ liệu không hợp lệ');
-    const isEmailExist = await this.usersService.isEmailExist(data.email);
-    if (isEmailExist)
-      throw new ConflictException(
-        'email đã được sử dụng vui lòng chọn email khác',
-      );
+    try {
+      if (!data) throw new BadRequestException('Invalid request data');
 
-    const user = await this.usersService.createUser(data);
-    const access_token = await this.generateAccessToken(user);
-    const refresh_token = await this.generateRefreshToken(user);
-    const addRefreshTokenToDB = await this.usersService.addRefreshTokenToDB(
-      refresh_token,
-      user.email,
-    );
-    if (!addRefreshTokenToDB)
-      throw new BadGatewayException('đã có lỗi xảy ra khi thêm token');
-    const dataForClient: UserResponseDto = {
-      _id: user._id,
-      email: user.email,
-      name: user.name,
-      username: user.username,
-      isActive: user.isActive,
-    };
-    return {
-      access_token,
-      refresh_token: refresh_token,
-      user: dataForClient,
-    };
+      const isEmailExist = await this.usersService.isEmailExist(data.email);
+      if (isEmailExist)
+        throw new ConflictException(
+          'Email is already in use, please choose another one',
+        );
+
+      const user = await this.usersService.createUser(data);
+      const refresh_token = await this.generateRefreshToken(user);
+      const access_token = await this.generateAccessToken(user, refresh_token);
+
+      const added = await this.usersService.addRefreshTokenToDB(
+        refresh_token,
+        user.email,
+      );
+      if (!added) {
+        this.logger.error(`Failed to add refresh token for ${user.email}`);
+        throw new InternalServerErrorException('Failed to add refresh token');
+      }
+
+      const dataForClient: UserResponseDto = {
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+        username: user.username,
+        isActive: user.isActive,
+      };
+
+      this.logger.log(`Account created successfully: ${user.email}`);
+      return {
+        message: 'Account created successfully',
+        access_token,
+        refresh_token,
+        user: dataForClient,
+      };
+    } catch (error) {
+      this.logger.error(`Register error for ${data?.email}`, error.stack);
+      if (error instanceof HttpException) throw error;
+
+      throw new InternalServerErrorException(
+        'Failed to create user in database',
+      );
+    }
   }
 
   async getProfileUser(user: UserResponseDto) {
     const userProfile = await this.usersService.getProfileUser(user.email);
     if (!userProfile)
-      throw new BadRequestException(`User có email ${user.email}`);
+      throw new BadRequestException(`User ${user.email} no exist`);
     return userProfile;
   }
 
@@ -150,7 +196,7 @@ export class AuthService {
   async updateProfileUser(email: string, body: UpdateUserDto) {
     if (!email) throw new BadRequestException();
     const user = await this.usersService.updateUserProfile(email, body);
-    if (!user) throw new BadRequestException(`User không tồn tại`);
+    if (!user) throw new BadRequestException(`User no exist`);
     return user;
   }
 
@@ -158,5 +204,14 @@ export class AuthService {
     if (!data) throw new BadRequestException();
     const result = await this.usersService.resetPassword(data);
     return result ? true : false;
+  }
+
+  async logout(_id: string) {
+    const result = await this.usersService.removeRefreshToken(_id);
+    if (!result) {
+      this.logger.warn(`Failed to remove refresh token for user: ${_id}`);
+      throw new InternalServerErrorException('Failed to remove refresh token');
+    }
+    return { message: 'Logout successful' };
   }
 }

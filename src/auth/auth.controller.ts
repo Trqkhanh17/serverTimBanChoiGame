@@ -7,9 +7,9 @@ import {
   UseGuards,
   Request,
   Get,
-  BadGatewayException,
   Patch,
   UnauthorizedException,
+  Delete,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '@/modules/users/dto/create-user.dto';
@@ -19,6 +19,7 @@ import { JwtRefreshGuard } from '@/auth/passport/guards/jwt-refresh.guard';
 import { UpdateAuthDto } from '@/auth/dto/update-auth.dto';
 import { UpdateUserDto } from '@/modules/users/dto/update-user.dto';
 import { ResetPasswordDto } from '@/modules/users/dto/reset-password.user.Dto';
+import { LoginRequestDto } from '@/auth/dto/login.Dto';
 
 @Controller('auth')
 export class AuthController {
@@ -28,9 +29,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   async login(@Request() req) {
-    const user = await this.authService.login(req.user);
-    if (!user) throw new BadRequestException('Đã có lỗi xảy ra');
-    return user;
+    return await this.authService.login(req.user);
   }
 
   @Post('register')
@@ -49,15 +48,13 @@ export class AuthController {
 
   @Post('refresh')
   @UseGuards(JwtRefreshGuard)
-  @HttpCode(201)
+  @HttpCode(200)
   async refresh(@Request() req) {
-    const user = await req.user;
-    const refreshToken = await req.refreshToken;
-    const result = await this.authService.getUserByid(user._id);
-    const refreshTokenInDB = result.refreshToken;
-    if (refreshTokenInDB !== refreshToken)
-      throw new UnauthorizedException('không hợp lệ');
-    const access_token = await this.authService.generateAccessToken(result);
+    const { user, refreshToken } = await req;
+    const access_token = await this.authService.generateAccessToken(
+      user,
+      refreshToken,
+    );
     return {
       access_token,
     };
@@ -87,5 +84,11 @@ export class AuthController {
     const result = await this.authService.resetPassword(data);
     if (!result) return 'Thay đổi mật khẩu thất bại';
     return 'Thay đổi mật khẩu thành công';
+  }
+
+  @UseGuards(JwtRefreshGuard)
+  @Delete('logout')
+  async logOut(@Request() req) {
+    return await this.authService.logout(req.user._id);
   }
 }

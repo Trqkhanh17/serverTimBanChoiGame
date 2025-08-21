@@ -37,12 +37,6 @@ export class User extends Document {
   isActive: boolean;
 
   @Prop()
-  otpCode: string;
-
-  @Prop()
-  otpExpiresAt: Date;
-
-  @Prop()
   refreshToken: string;
 
   @Prop({ default: false })

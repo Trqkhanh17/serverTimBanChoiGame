@@ -6,12 +6,14 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { LocalStrategy } from '@/auth/passport/strategies/local.strategy';
-import { JwtStrategy } from '@/auth/passport/strategies/jwt.strategy';
+import { JwtStrategy } from '@/auth/passport/strategies/jwt.access.strategy';
 import { JwtRefreshStrategy } from '@/auth/passport/strategies/jwt-refresh.strategy';
+import { OtpModule } from '@/modules/otp/otp.module';
 
 @Module({
   imports: [
     UsersModule,
+    OtpModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

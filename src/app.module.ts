@@ -8,7 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { GameProfileModule } from './modules/game-profile/game-profile.module';
 import { FriendModule } from './modules/friend/friend.module';
 import { MatchSearchModule } from './modules/match-search/match-search.module';
-
+import { OtpModule } from './modules/otp/otp.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -26,6 +26,7 @@ import { MatchSearchModule } from './modules/match-search/match-search.module';
     GameProfileModule,
     FriendModule,
     MatchSearchModule,
+    OtpModule,
   ],
   controllers: [AppController],
   providers: [AppService],
