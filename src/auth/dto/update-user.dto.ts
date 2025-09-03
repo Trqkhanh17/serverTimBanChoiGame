@@ -1,9 +1,9 @@
-import { IsDate, IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsIn, IsOptional, IsString } from 'class-validator';
 
 export class UpdateUserDto {
   @IsOptional()
-  @IsEnum(['male', 'female'])
-  gender?: string;
+  @IsIn(['male', 'female'])
+  gender?: 'male' | 'female';
 
   @IsOptional()
   @IsString()

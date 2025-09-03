@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsEmail,
   IsString,
@@ -10,19 +11,19 @@ import {
 } from 'class-validator';
 
 export class CreateUserDto {
-  @IsNotEmpty({ message: 'Email không được rỗng' })
-  @IsEmail({}, { message: 'Email không đúng định dạng' })
+  @IsNotEmpty({ message: 'Email is not empty' })
+  @IsEmail({}, { message: 'Invalid email format' })
   email: string;
 
-  @IsNotEmpty({ message: 'Mật khẩu không được để trống' })
+  @IsNotEmpty({ message: 'Password is not empty' })
   @IsString()
-  @MinLength(8, { message: 'Mật khẩu phải từ 8 ký tự trở lên' })
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
   password: string;
 
-  @IsNotEmpty({ message: 'user name không được rỗng' })
+  @IsNotEmpty({ message: 'User name is not empty' })
   @IsString()
-  @MinLength(4, { message: 'User name phải có từ 4 ký tự trở lên' })
-  @MaxLength(20, { message: 'User name không được vượt quá 20 ký tự' })
+  @MinLength(4, { message: 'Username must be at least 4 characters long' })
+  @MaxLength(20, { message: 'Username must not exceed 20 characters' })
   username: string;
 
   @IsOptional()
@@ -46,6 +47,7 @@ export class CreateUserDto {
   bio?: string;
 
   @IsOptional()
-  @IsDate({ message: 'Vui lòng chọn ngày tháng năm sinh hợp lệ' })
+  @Type(() => Date)
+  @IsDate({ message: 'Birth date must be a valid date' })
   birthDate?: Date;
 }

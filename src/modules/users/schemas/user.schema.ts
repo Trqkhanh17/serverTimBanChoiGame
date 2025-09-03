@@ -16,6 +16,9 @@ export class User extends Document {
   name: string;
 
   @Prop()
+  phone: string;
+
+  @Prop()
   avatarUrl: string;
 
   @Prop()
@@ -27,7 +30,7 @@ export class User extends Document {
   @Prop()
   birthDate: string;
 
-  @Prop({ default: 'local' })
+  @Prop({ default: 'local', select: false })
   authProvider: string;
 
   @Prop()
@@ -36,10 +39,16 @@ export class User extends Document {
   @Prop({ default: false })
   isActive: boolean;
 
-  @Prop()
+  @Prop({ select: false })
   refreshToken: string;
 
   @Prop({ default: false })
   isBanned: boolean;
+
+  @Prop({ type: Date, default: null })
+  emailVerifiedAt?: Date;
+
+  @Prop({ type: String, default: null })
+  verifyJti?: string | null;
 }
 export const UserSchema = SchemaFactory.createForClass(User);

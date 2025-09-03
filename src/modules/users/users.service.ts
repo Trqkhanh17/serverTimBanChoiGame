@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -9,11 +8,13 @@ import {
 import { Model } from 'mongoose';
 import { User } from 'src/modules/users/schemas/user.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { CreateUserDto } from 'src/modules/users/dto/create-user.dto';
 import { hashPasswordHelper } from '@/common/helpers/ulti';
-import { UpdateUserDto } from '@/modules/users/dto/update-user.dto';
 import { ResetPasswordDto } from '@/modules/users/dto/reset-password.user.Dto';
-import { UserDocument } from '@/common/types/user.types';
+import {
+  UserCreateInput,
+  UserDocument,
+  UserUpdateInput,
+} from '@/common/types/user.types';
 import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
 
 @Injectable()
@@ -22,9 +23,13 @@ export class UsersService {
 
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
-  async findUserByEmail(email: string): Promise<UserDocument | null> {
+  async findByEmailForAuth(email: string): Promise<UserDocument | null> {
     try {
-      const user = await this.userModel.findOne({ email }).lean();
+      const norm = email.trim().toLowerCase();
+      const user = await this.userModel
+        .findOne({ email: norm })
+        .select('+password')
+        .lean();
       return user || null;
     } catch (error) {
       this.logger.error(
@@ -35,6 +40,19 @@ export class UsersService {
     }
   }
 
+  async findUserByEmail(email: string): Promise<UserDocument | null> {
+    try {
+      const norm = email.trim().toLowerCase();
+      const user = await this.userModel.findOne({ email: norm }).lean();
+      return user || null;
+    } catch (error) {
+      this.logger.error(
+        `Database error finding user by email: ${email}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException('Database query failed');
+    }
+  }
   async isEmailExist(email: string): Promise<boolean> {
     try {
       const user = await this.userModel.exists({ email });
@@ -61,14 +79,13 @@ export class UsersService {
     }
   }
 
-  async createUser(body: CreateUserDto): Promise<UserDocument> {
+  async createUser(dataInput: UserCreateInput): Promise<UserDocument> {
     try {
-      const { email, password, username, name } = body;
-      const hashPassword = await hashPasswordHelper(password);
+      const { email, passwordHash, username, name } = dataInput;
 
       const user = await this.userModel.create({
         email,
-        password: hashPassword,
+        password: passwordHash,
         username,
         name,
       });
@@ -110,37 +127,49 @@ export class UsersService {
     }
   }
 
-  async findUserById(_id: string): Promise<UserDocument | null> {
+  async findUserById(userId: string): Promise<UserDocument | null> {
     try {
-      const user = await this.userModel.findOne({ _id }).lean();
+      const user = await this.userModel.findById({ _id: userId }).lean();
       return user || null;
     } catch (error) {
       this.logger.error(
-        `Database error finding user by ID: ${_id}`,
+        `Database error finding user by ID: ${userId}`,
         error.stack,
       );
       throw new InternalServerErrorException('Database query failed');
     }
   }
 
-  async updateUserProfile(email: string, body: UpdateUserDto) {
+  async updateUserProfile(
+    userId: string,
+    data: UserUpdateInput,
+  ): Promise<UserResponseDto | null> {
     try {
-      const user = await this.userModel.findOneAndUpdate(
-        { email },
-        { $set: body },
+      const user = await this.userModel.findByIdAndUpdate(
+        { _id: userId },
+        { $set: data },
         { new: true },
       );
 
       if (!user) return null;
 
-      const { password, _id, authProvider, lastLogin, ...result } =
-        user.toObject ? user.toObject() : user;
+      const result: UserResponseDto = {
+        _id: user._id.toString(),
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        isActive: user.isActive,
+        bio: user.bio,
+        gender: user.gender,
+        birthDate: user.birthDate,
+        avatarUrl: user.avatarUrl,
+      };
 
-      this.logger.log(`User profile updated: ${email}`);
+      this.logger.log(`User profile updated: ${userId}`);
       return result;
     } catch (error) {
       this.logger.error(
-        `Database error updating user profile: ${email}`,
+        `Database error updating user profile: ${userId}`,
         error.stack,
       );
       if (error instanceof HttpException) throw error;
@@ -173,10 +202,10 @@ export class UsersService {
     }
   }
 
-  async addRefreshTokenToDB(token: string, email: string): Promise<boolean> {
+  async addRefreshTokenToDB(token: string, userId: string): Promise<boolean> {
     try {
       const user = await this.userModel.findOneAndUpdate(
-        { email },
+        { _id: userId },
         { $set: { refreshToken: token } },
         { new: true },
       );
@@ -184,7 +213,7 @@ export class UsersService {
       return !!user;
     } catch (error) {
       this.logger.error(
-        `Database error adding refresh token: ${email}`,
+        `Database error adding refresh token: ${userId}`,
         error.stack,
       );
       if (error instanceof HttpException) throw error;
@@ -196,6 +225,7 @@ export class UsersService {
     try {
       const user = await this.userModel
         .findOne({ _id, refreshToken: { $exists: true, $ne: null } })
+        .select('refreshToken')
         .lean();
       return user?.refreshToken ? user.refreshToken : null;
     } catch (error) {
@@ -265,7 +295,7 @@ export class UsersService {
     }
   }
 
-  async findUsersByIds(userIds: string[]): Promise<UserDocument[]> {
+  async findUsersById(userIds: string[]): Promise<UserDocument[]> {
     try {
       const users = await this.userModel.find({ _id: { $in: userIds } }).lean();
       return users;
@@ -273,5 +303,23 @@ export class UsersService {
       this.logger.error('Database error finding users by IDs', error.stack);
       throw new InternalServerErrorException('Database query failed');
     }
+  }
+  async setVerifyJti(userId: string, jti: string): Promise<boolean> {
+    const user = await this.userModel.updateOne(
+      { _id: userId },
+      { $set: { verifyJti: jti } },
+    );
+    if (!user) return false;
+    return true;
+  }
+  async consumeVerifyJti(userId: string, jti: string): Promise<boolean> {
+    // atomic: đúng user + đúng jti -> kích hoạt & xóa jti
+    const res = await this.userModel.updateOne(
+      { _id: userId, verifyJti: jti },
+      {
+        $set: { isActive: true, emailVerifiedAt: new Date(), verifyJti: null },
+      },
+    );
+    return res.modifiedCount > 0; // (true nếu tiêu thụ thành công)
   }
 }

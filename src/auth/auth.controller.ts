@@ -8,19 +8,16 @@ import {
   Request,
   Get,
   Patch,
-  UnauthorizedException,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateUserDto } from '@/modules/users/dto/create-user.dto';
 import { LocalAuthGuard } from '@/auth/passport/guards/local-auth.guard';
 import { JwtAccessGuard } from '@/auth/passport/guards/jwt-auth.guard';
 import { JwtRefreshGuard } from '@/auth/passport/guards/jwt-refresh.guard';
-import { UpdateAuthDto } from '@/auth/dto/update-auth.dto';
-import { UpdateUserDto } from '@/modules/users/dto/update-user.dto';
+import { UpdateUserDto } from '@/auth/dto/update-user.dto';
 import { ResetPasswordDto } from '@/modules/users/dto/reset-password.user.Dto';
-import { LoginRequestDto } from '@/auth/dto/login.Dto';
-
+import { RegisterDto } from '@/auth/dto/register.Dto';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -34,7 +31,7 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(201)
-  async register(@Body() data: CreateUserDto) {
+  async register(@Body() data: RegisterDto) {
     return await this.authService.register(data);
   }
 
@@ -66,7 +63,7 @@ export class AuthController {
   async udpateProfile(@Request() req, @Body() body: UpdateUserDto) {
     const { user } = req;
     if (!user) throw new BadRequestException();
-    return this.authService.updateProfileUser(user.email, body);
+    return this.authService.updateProfileUser(user._id, body);
   }
 
   @Post('forgot-password')
@@ -90,5 +87,11 @@ export class AuthController {
   @Delete('logout')
   async logOut(@Request() req) {
     return await this.authService.logout(req.user._id);
+  }
+
+  @Get('verify-email')
+  async verifyEmail(@Query('token') token: string) {
+    const result = await this.authService.verifyEmailToken(token);
+    return result;
   }
 }

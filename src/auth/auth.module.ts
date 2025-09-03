@@ -9,6 +9,7 @@ import { LocalStrategy } from '@/auth/passport/strategies/local.strategy';
 import { JwtStrategy } from '@/auth/passport/strategies/jwt.access.strategy';
 import { JwtRefreshStrategy } from '@/auth/passport/strategies/jwt-refresh.strategy';
 import { OtpModule } from '@/modules/otp/otp.module';
+import { MailModule } from '@/mail/mail.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { OtpModule } from '@/modules/otp/otp.module';
       }),
     }),
     PassportModule,
+    MailModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, LocalStrategy, JwtStrategy, JwtRefreshStrategy],

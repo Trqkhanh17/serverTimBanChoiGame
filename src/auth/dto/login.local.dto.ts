@@ -1,9 +1,10 @@
 import { IsEmail, IsNotEmpty } from 'class-validator';
 
-export class LoginRequestDto {
+export class LoginLocalDto {
   @IsNotEmpty()
-  @IsEmail({}, { message: 'Email không đúng định dạng' })
+  @IsEmail()
   email: string;
+
   @IsNotEmpty()
   password: string;
 }

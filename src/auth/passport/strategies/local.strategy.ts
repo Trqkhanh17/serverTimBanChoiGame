@@ -6,6 +6,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from '@/auth/auth.service';
+import { AuthUser } from '@/common/types/auth.types';
+import { isEmail } from 'class-validator';
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
@@ -13,17 +15,21 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     super({ usernameField: 'email' });
   }
 
-  async validate(email: string, password: string) {
+  async validate(email: string, password: string): Promise<AuthUser> {
+    if (!email || !password) {
+      throw new BadRequestException('Email and password are required');
+    }
+    if (!isEmail(email)) throw new BadRequestException('Invalid email format');
     const user = await this.authService.validateUser(email, password);
     if (!user) {
-      throw new UnauthorizedException('Sai tài khoản hoặc mật khẩu');
+      throw new UnauthorizedException('Incorrect email or password');
     }
     if (!user.isActive)
-      throw new BadRequestException('Tài khoản chưa được kích hoạt');
+      throw new BadRequestException('Your account has not been activated');
     if (user.isBanned)
       throw new BadRequestException(
-        'Tài khoản của bạn hiện đã bị khóa vui lòng liên hệ để biết thêm chi tiết',
+        'Your account has been locked. Please contact support for more details',
       );
-    return user;
+    return user as AuthUser;
   }
 }
