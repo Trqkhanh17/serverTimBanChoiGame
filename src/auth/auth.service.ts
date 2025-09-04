@@ -51,6 +51,7 @@ export class AuthService {
       isActive: user.isActive,
       isBanned: user.isBanned,
     };
+
     return result;
   }
 
@@ -242,6 +243,7 @@ export class AuthService {
     };
     return dataUpdateUser;
   }
+
   async updateProfileUser(
     userId: string,
     body: UpdateUserDto,
@@ -280,7 +282,7 @@ export class AuthService {
       const token = await this.generateVerifyEmail(user, jti);
       const verifyUrl = `${this.configService.get('BACKEND_BASE_URL')}auth/verify-email?token=${encodeURIComponent(token)}`;
       await this.mailService.sendVerifyEmailUser(user.email, verifyUrl, {
-        username: user.username ?? user.email,
+        name: user.name ?? user.email,
         expiresIn: 15,
       });
       this.logger.log(`Send mail to ${user.email} successfully`);
@@ -293,7 +295,7 @@ export class AuthService {
     let payload: any;
     try {
       payload = await this.jwtService.verifyAsync(token, {
-        secret: this.configService.get('EMAIL_VERIFY_SECRET'),
+        secret: this.configService.get<string>('EMAIL_VERIFY_SECRET'),
       });
     } catch {
       throw new BadRequestException('Invalid or expired token');

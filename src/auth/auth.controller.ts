@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from '@/auth/passport/guards/local-auth.guard';
-import { JwtAccessGuard } from '@/auth/passport/guards/jwt-auth.guard';
+import { JwtAccessGuard } from '@/auth/passport/guards/jwt-access.guard';
 import { JwtRefreshGuard } from '@/auth/passport/guards/jwt-refresh.guard';
 import { UpdateUserDto } from '@/auth/dto/update-user.dto';
 import { ResetPasswordDto } from '@/modules/users/dto/reset-password.user.Dto';

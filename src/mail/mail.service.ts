@@ -7,16 +7,16 @@ export class MailService {
   async sendVerifyEmailUser(
     email: string,
     verifyUrl: string,
-    ctx?: { username?: string; expiresIn?: number },
+    ctx?: { name?: string; expiresIn?: number },
   ) {
     try {
       await this.mailerService.sendMail({
         to: email,
-        subject: 'Xác thực email – Tìm bạn chơi Liên Quân',
-        template: 'verify-account', // trỏ tới file .hbs ở trên
+        subject: 'Email Verification – AOV Squad Finder',
+        template: 'verify-account',
         context: {
-          appName: 'Tìm Bạn Chơi Game',
-          username: ctx?.username ?? 'Bạn',
+          appName: 'AOV Squad Finder',
+          name: ctx?.name ?? 'Bạn',
           verifyUrl,
           expiresIn: ctx?.expiresIn ?? 15,
           supportEmail: 'support@example.com',

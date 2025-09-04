@@ -16,8 +16,7 @@ import { join } from 'path';
       useFactory: (config: ConfigService) => {
         const host = config.get<string>('MAIL_HOST')!;
         const port = Number(config.get('MAIL_PORT') ?? 587);
-        const secure = port === 465;
-
+        const secure = port;
         return {
           transport: {
             host,
@@ -27,12 +26,6 @@ import { join } from 'path';
               user: config.get<string>('MAIL_USER')!,
               pass: config.get<string>('MAIL_PASS')!,
             },
-            requireTLS: !secure,
-            logger: true,
-            debug: true,
-            connectionTimeout: 15000,
-            greetingTimeout: 10000,
-            socketTimeout: 20000,
           },
           defaults: { from: config.get<string>('MAIL_FROM') },
           template: {
