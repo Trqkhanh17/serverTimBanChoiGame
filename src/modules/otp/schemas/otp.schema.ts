@@ -1,9 +1,6 @@
+import type { OtpPurpose } from '@/common/types/opt.types';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-
-export type OtpDocument = Otp & Document;
-
-export type OtpPurpose = 'reset_phone' | 'reset_password';
 
 @Schema({ timestamps: true })
 export class Otp {

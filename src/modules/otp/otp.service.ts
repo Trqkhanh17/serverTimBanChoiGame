@@ -1,6 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import {
+  CreateOtpInput,
+  OtpDocument,
+  OtpPurpose,
+} from '@/common/types/opt.types';
+import { Otp } from '@/modules/otp/schemas/otp.schema';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Otp, OtpDocument, OtpPurpose } from '@/modules/otp/schemas/otp.schema';
 import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 @Injectable()
@@ -8,19 +13,20 @@ export class OtpService {
   constructor(@InjectModel(Otp.name) private otpModel: Model<OtpDocument>) {}
 
   // Tạo OTP mới
-  async createOtp(
-    userId: string,
-    purpose: OtpPurpose,
-    expiresInMinutes: number,
-  ) {
-    const otpCode = await uuidv4();
-    const otp = new this.otpModel({
-      userId,
-      otpCode,
-      purpose,
-      otpExpiresAt: new Date(Date.now() + expiresInMinutes * 60000),
-    });
-    return otp.save();
+  async createOtp(otpInput: CreateOtpInput) {
+    try {
+      const { expiresInMinutes, purpose, userId } = otpInput;
+      const otpCode = uuidv4();
+      const otp = new this.otpModel({
+        userId,
+        otpCode,
+        purpose,
+        otpExpiresAt: new Date(Date.now() + expiresInMinutes * 60000),
+      });
+      return otp.save();
+    } catch (error) {
+      throw new BadRequestException();
+    }
   }
 
   // Verify OTP

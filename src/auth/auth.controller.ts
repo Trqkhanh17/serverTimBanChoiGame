@@ -18,6 +18,7 @@ import { JwtRefreshGuard } from '@/auth/passport/guards/jwt-refresh.guard';
 import { UpdateUserDto } from '@/auth/dto/update-user.dto';
 import { ResetPasswordDto } from '@/modules/users/dto/reset-password.user.Dto';
 import { RegisterDto } from '@/auth/dto/register.Dto';
+import { EmailValidateDto } from '@/auth/dto/forgot-password.dto';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -32,6 +33,8 @@ export class AuthController {
   @Post('register')
   @HttpCode(201)
   async register(@Body() data: RegisterDto) {
+    console.log('dto: ', data);
+
     return await this.authService.register(data);
   }
 
@@ -68,12 +71,8 @@ export class AuthController {
 
   @Post('forgot-password')
   @HttpCode(201)
-  async forgotPassword(@Body('email') email: string) {
-    const reset_paswordtoken =
-      await this.authService.generateRessetPasswordToken(email);
-    return {
-      reset_paswordtoken: reset_paswordtoken,
-    };
+  async forgotPassword(@Body() input: EmailValidateDto) {
+    await this.authService.sendUserForgotPassword(input.email.toString());
   }
 
   @Patch('reset-password')

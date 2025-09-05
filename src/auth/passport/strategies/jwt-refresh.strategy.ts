@@ -9,7 +9,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
   'jwt-refresh',
 ) {
   constructor(private configService: ConfigService) {
-    const jwtSecret = configService.get<string>('REFRESH_JWT_SECRET');
+    const jwtSecret = configService.get<string>('JWT_REFRESH_SECRET');
     if (!jwtSecret) throw new Error('REFRESH_JWT_SECRET is not defind');
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

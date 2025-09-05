@@ -28,6 +28,8 @@ import {
 } from '@/common/types/user.types';
 import { v4 as uuidv4 } from 'uuid';
 import { MailService } from '@/mail/mail.service';
+import { CreateOtpInput } from '@/common/types/opt.types';
+import { OtpService } from '@/modules/otp/otp.service';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -36,6 +38,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
+    private readonly otpService: OtpService,
   ) {}
 
   async validateUser(userName: string, pass: string): Promise<AuthUser | null> {
@@ -58,8 +61,8 @@ export class AuthService {
   async generateRefreshToken(user: UserResponseDto): Promise<string> {
     const payLoadRefreshToken = { sub: user._id, type: 'refresh' };
     const refresh_token = await this.jwtService.signAsync(payLoadRefreshToken, {
-      secret: this.configService.get<string>('REFRESH_JWT_SECRET'),
-      expiresIn: this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRED'),
+      secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+      expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRED'),
     });
     return refresh_token;
   }
@@ -72,7 +75,7 @@ export class AuthService {
     const verifyEmail_token = await this.jwtService.signAsync(
       payLoadRefreshToken,
       {
-        secret: this.configService.get<string>('EMAIL_VERIFY_SECRET'),
+        secret: this.configService.get<string>('JWT_EMAIL_VERIFY_SECRET'),
         expiresIn:
           this.configService.get<string>('EMAIL_VERIFY_EXPIRE') ?? '15m',
       },
@@ -280,7 +283,7 @@ export class AuthService {
       if (!setVerifyJti)
         throw new BadRequestException('Faild to set VerifyJti');
       const token = await this.generateVerifyEmail(user, jti);
-      const verifyUrl = `${this.configService.get('BACKEND_BASE_URL')}auth/verify-email?token=${encodeURIComponent(token)}`;
+      const verifyUrl = `${this.configService.get<string>('BACKEND_BASE_URL')}auth/verify-email?token=${encodeURIComponent(token)}`;
       await this.mailService.sendVerifyEmailUser(user.email, verifyUrl, {
         name: user.name ?? user.email,
         expiresIn: 15,
@@ -295,7 +298,7 @@ export class AuthService {
     let payload: any;
     try {
       payload = await this.jwtService.verifyAsync(token, {
-        secret: this.configService.get<string>('EMAIL_VERIFY_SECRET'),
+        secret: this.configService.get<string>('JWT_EMAIL_VERIFY_SECRET'),
       });
     } catch {
       throw new BadRequestException('Invalid or expired token');
@@ -312,5 +315,23 @@ export class AuthService {
     if (!ok) throw new BadRequestException('Token already used or invalid');
     this.logger.log(`verify user ${payload}`);
     return { message: 'Email verified successfully' };
+  }
+
+  async sendUserForgotPassword(email: string) {
+    const user = await this.usersService.findUserByEmail(email);
+    if (!user) throw new BadRequestException('User not found with this email');
+    try {
+      const otpInput: CreateOtpInput = {
+        userId: user._id,
+        expiresInMinutes: 5,
+        purpose: 'reset_password',
+      };
+      const otp = await this.otpService.createOtp(otpInput);
+      if (!otp) throw new BadRequestException();
+      await this.mailService.sendOtpForgotPassword(email, otp.otpCode, {
+        name: user.name ?? user.email,
+        expiresIn: 5,
+      });
+    } catch (error) {}
   }
 }

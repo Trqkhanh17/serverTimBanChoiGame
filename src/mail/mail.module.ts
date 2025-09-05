@@ -13,9 +13,9 @@ import { join } from 'path';
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const host = config.get<string>('MAIL_HOST')!;
-        const port = Number(config.get('MAIL_PORT') ?? 587);
+      useFactory: (configService: ConfigService) => {
+        const host = configService.get<string>('MAIL_HOST')!;
+        const port = Number(configService.get('MAIL_PORT') ?? 587);
         const secure = port;
         return {
           transport: {
@@ -23,11 +23,11 @@ import { join } from 'path';
             port,
             secure,
             auth: {
-              user: config.get<string>('MAIL_USER')!,
-              pass: config.get<string>('MAIL_PASS')!,
+              user: configService.get<string>('MAIL_USER')!,
+              pass: configService.get<string>('MAIL_PASS')!,
             },
           },
-          defaults: { from: config.get<string>('MAIL_FROM') },
+          defaults: { from: configService.get<string>('MAIL_FROM') },
           template: {
             dir: join(__dirname, 'templates'),
             adapter: new HandlebarsAdapter(),

@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class MailService {
+  private readonly logger = new Logger(MailService.name);
   constructor(private readonly mailerService: MailerService) {}
   async sendVerifyEmailUser(
     email: string,
@@ -27,14 +28,28 @@ export class MailService {
     }
   }
 
-  async sendPasswordReset(email: string, token: string) {
-    const url = `http://localhost:3000/auth/reset-password?token=${token}`;
-
-    await this.mailerService.sendMail({
-      to: email,
-      subject: 'Reset your password',
-      template: './reset-password',
-      context: { email, url },
-    });
+  async sendOtpForgotPassword(
+    email: string,
+    otpCode: string,
+    ctx?: { name?: string; expiresIn?: number },
+  ) {
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Your OTP Code to reset password – AOV Squad Finder',
+        template: 'reset-password',
+        context: {
+          appName: 'AOV Squad Finder',
+          name: ctx?.name ?? 'Bạn',
+          otpCode,
+          expiresIn: ctx?.expiresIn ?? 5,
+          supportEmail: 'support@example.com',
+        },
+      });
+      this.logger.log(`OTP sent to ${email}`);
+    } catch (error) {
+      this.logger.error('sendOtpEmail error', error.stack);
+      throw error;
+    }
   }
 }
