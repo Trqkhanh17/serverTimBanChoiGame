@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -8,9 +9,13 @@ import {
 import { Model } from 'mongoose';
 import { User } from 'src/modules/users/schemas/user.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { hashPasswordHelper } from '@/common/helpers/ulti';
-import { ResetPasswordDto } from '@/modules/users/dto/reset-password.user.Dto';
 import {
+  comparePasswordHelper,
+  hashPasswordHelper,
+} from '@/common/helpers/ulti';
+import {
+  changePasswordInPut,
+  checkPasswordInPut,
   UserCreateInput,
   UserDocument,
   UserUpdateInput,
@@ -177,24 +182,42 @@ export class UsersService {
     }
   }
 
-  async resetPassword(data: ResetPasswordDto): Promise<boolean> {
+  async checkPassword(
+    checkPasswordInPut: checkPasswordInPut,
+  ): Promise<boolean> {
     try {
-      const { email, password } = data;
-      const hashedPass = await hashPasswordHelper(password);
+      const { password, userId } = checkPasswordInPut;
+      const user = await this.findUserById(userId);
+      if (!user) throw new BadRequestException();
+      const currentPassword = user.password;
+      const isMatch = await comparePasswordHelper(password, currentPassword);
+      if (!isMatch) return false;
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+  async changeUserPassword(
+    dataForChangePassword: changePasswordInPut,
+  ): Promise<boolean> {
+    try {
+      const { userId, newPassword } = dataForChangePassword;
+
+      const hashedPass = await hashPasswordHelper(newPassword);
 
       const updatedUser = await this.userModel.findOneAndUpdate(
-        { email },
+        { _id: userId },
         { $set: { password: hashedPass } },
         { new: true },
       );
 
       if (!updatedUser) return false;
 
-      this.logger.log(`Password reset successfully: ${email}`);
+      this.logger.log(`Password change successfully: ${userId}`);
       return true;
     } catch (error) {
       this.logger.error(
-        `Database error resetting password: ${data?.email}`,
+        `Database error change password: ${dataForChangePassword.userId}`,
         error.stack,
       );
       if (error instanceof HttpException) throw error;
@@ -313,13 +336,12 @@ export class UsersService {
     return true;
   }
   async consumeVerifyJti(userId: string, jti: string): Promise<boolean> {
-    // atomic: đúng user + đúng jti -> kích hoạt & xóa jti
     const res = await this.userModel.updateOne(
       { _id: userId, verifyJti: jti },
       {
         $set: { isActive: true, emailVerifiedAt: new Date(), verifyJti: null },
       },
     );
-    return res.modifiedCount > 0; // (true nếu tiêu thụ thành công)
+    return res.modifiedCount > 0;
   }
 }

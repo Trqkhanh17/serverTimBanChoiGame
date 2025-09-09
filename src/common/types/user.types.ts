@@ -26,3 +26,12 @@ export interface UserUpdateInput {
   gender?: 'male' | 'female';
   birthDate?: string;
 }
+
+export interface changePasswordInPut {
+  userId: string;
+  newPassword: string;
+}
+export interface checkPasswordInPut {
+  userId: string;
+  password: string;
+}

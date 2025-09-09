@@ -16,9 +16,10 @@ import { LocalAuthGuard } from '@/auth/passport/guards/local-auth.guard';
 import { JwtAccessGuard } from '@/auth/passport/guards/jwt-access.guard';
 import { JwtRefreshGuard } from '@/auth/passport/guards/jwt-refresh.guard';
 import { UpdateUserDto } from '@/auth/dto/update-user.dto';
-import { ResetPasswordDto } from '@/modules/users/dto/reset-password.user.Dto';
 import { RegisterDto } from '@/auth/dto/register.Dto';
 import { EmailValidateDto } from '@/auth/dto/forgot-password.dto';
+import { ChangePasswordDto } from '@/auth/dto/change-password.dto';
+import { InputChangePasswordAuth } from '@/common/types/auth.types';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -63,7 +64,7 @@ export class AuthController {
   @Patch('profile')
   @UseGuards(JwtAccessGuard)
   @HttpCode(200)
-  async udpateProfile(@Request() req, @Body() body: UpdateUserDto) {
+  async updateProfile(@Request() req, @Body() body: UpdateUserDto) {
     const { user } = req;
     if (!user) throw new BadRequestException();
     return this.authService.updateProfileUser(user._id, body);
@@ -75,12 +76,21 @@ export class AuthController {
     await this.authService.sendUserForgotPassword(input.email.toString());
   }
 
-  @Patch('reset-password')
-  async resetPassword(@Body() data: ResetPasswordDto) {
-    const result = await this.authService.resetPassword(data);
-    if (!result) return 'Thay đổi mật khẩu thất bại';
-    return 'Thay đổi mật khẩu thành công';
+  @UseGuards(JwtAccessGuard)
+  @Patch('change-password')
+  async changePassword(@Request() req, @Body() data: ChangePasswordDto) {
+    const userId = req.user._id;
+    const inPutChangePassword: InputChangePasswordAuth = {
+      comFirmPassword: data.comFirmPassword,
+      newPassword: data.newPassword,
+      oldPassword: data.oldPassword,
+      userId: userId,
+    };
+    return await this.authService.changePassword(inPutChangePassword);
   }
+
+  @Patch('change-password-forgot')
+  async changePasswordForgot(@Body() input) {}
 
   @UseGuards(JwtRefreshGuard)
   @Delete('logout')

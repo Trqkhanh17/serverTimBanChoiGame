@@ -2,9 +2,15 @@ import {
   CreateOtpInput,
   OtpDocument,
   OtpPurpose,
+  verifyOtpInput,
 } from '@/common/types/opt.types';
 import { Otp } from '@/modules/otp/schemas/otp.schema';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,20 +36,26 @@ export class OtpService {
   }
 
   // Verify OTP
-  async verifyOtp(userId: string, otpCode: string, purpose: OtpPurpose) {
-    const otp = await this.otpModel.findOne({
-      userId,
-      otpCode,
-      purpose,
-      used: false,
-      otpExpiresAt: { $gt: new Date() },
-    });
+  async verifyOtp(input: verifyOtpInput) {
+    try {
+      const { otpCode, purpose, userId } = input;
+      const otp = await this.otpModel.findOne({
+        userId,
+        otpCode,
+        purpose,
+        used: false,
+        otpExpiresAt: { $gt: new Date() },
+      });
 
-    if (!otp) return false;
+      if (!otp) return false;
 
-    otp.used = true;
-    await otp.save();
-    return true;
+      otp.used = true;
+      await otp.save();
+      return true;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException();
+    }
   }
 
   // Xóa OTP hết hạn (cleanup, optional)

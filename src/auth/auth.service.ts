@@ -16,20 +16,24 @@ import {
 } from '@/common/helpers/ulti';
 import { ConfigService } from '@nestjs/config';
 import { UpdateUserDto } from '@/auth/dto/update-user.dto';
-import { ResetPasswordDto } from '@/modules/users/dto/reset-password.user.Dto';
 import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
 import { AuthResponseDto } from '@/auth/dto/auth-response.dto';
 import { RegisterDto } from '@/auth/dto/register.Dto';
-import { AuthUser } from '@/common/types/auth.types';
+import { AuthUser, InputChangePasswordAuth } from '@/common/types/auth.types';
 import {
+  changePasswordInPut,
+  checkPasswordInPut,
   UserCreateInput,
   UserDocument,
   UserUpdateInput,
 } from '@/common/types/user.types';
 import { v4 as uuidv4 } from 'uuid';
 import { MailService } from '@/mail/mail.service';
-import { CreateOtpInput } from '@/common/types/opt.types';
+import { CreateOtpInput, verifyOtpInput } from '@/common/types/opt.types';
 import { OtpService } from '@/modules/otp/otp.service';
+import e from 'express';
+import internal from 'stream';
+import { ChangePasswordDto } from '@/auth/dto/change-password.dto';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -261,10 +265,42 @@ export class AuthService {
     return user;
   }
 
-  async resetPassword(data: ResetPasswordDto): Promise<boolean> {
-    if (!data) throw new BadRequestException();
-    const result = await this.usersService.resetPassword(data);
-    return result ? true : false;
+  async changePassword(
+    changePasswordInPut: InputChangePasswordAuth,
+  ): Promise<{ message: string }> {
+    try {
+      if (!changePasswordInPut)
+        throw new BadRequestException('Input is required');
+      const { comFirmPassword, newPassword, oldPassword, userId } =
+        changePasswordInPut;
+      const inputCheckPassword: checkPasswordInPut = {
+        userId: userId,
+        password: oldPassword,
+      };
+      const isMatch = await this.usersService.checkPassword(inputCheckPassword);
+      if (!isMatch) throw new BadRequestException('Old password is incorrect');
+      if (newPassword !== comFirmPassword)
+        throw new BadRequestException('Passwords do not match');
+      const inputChangePassword: changePasswordInPut = {
+        userId,
+        newPassword,
+      };
+      const result =
+        await this.usersService.changeUserPassword(inputChangePassword);
+      if (!result)
+        return {
+          message: 'Password change failed',
+        };
+      return {
+        message: 'Password change successfully',
+      };
+    } catch (error) {
+      this.logger.log(
+        `Password change Failed user${changePasswordInPut.userId}`,
+      );
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Failed to change password');
+    }
   }
 
   async logout(_id: string) {
@@ -333,5 +369,23 @@ export class AuthService {
         expiresIn: 5,
       });
     } catch (error) {}
+  }
+
+  async verifyOtpForgotPassword(email: string, otpCode: string) {
+    try {
+      const user = await this.usersService.findUserByEmail(email);
+      if (!user) throw new BadRequestException();
+      const inputVerifyOtp: verifyOtpInput = {
+        otpCode: otpCode,
+        purpose: 'reset_password',
+        userId: user._id,
+      };
+      const verifyOtp = await this.otpService.verifyOtp(inputVerifyOtp);
+      if (!verifyOtp) throw new BadRequestException();
+    } catch (error) {
+      this.logger.log(`verify otp error with email: ${email}`);
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException();
+    }
   }
 }

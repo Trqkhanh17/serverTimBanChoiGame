@@ -6,3 +6,12 @@ export interface AuthUser {
   isActive: boolean;
   isBanned: boolean;
 }
+
+export interface InputChangePasswordAuth {
+  newPassword: string;
+  oldPassword: string;
+  comFirmPassword: string;
+  userId: string;
+}
+
+// export interface

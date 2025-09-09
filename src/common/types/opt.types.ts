@@ -5,6 +5,11 @@ export interface CreateOtpInput {
   purpose: OtpPurpose;
   expiresInMinutes: number;
 }
+export interface verifyOtpInput {
+  userId: string;
+  otpCode: string;
+  purpose: OtpPurpose;
+}
 export type OtpDocument = Otp & Document;
 
 export type OtpPurpose = 'reset_phone' | 'reset_password';
