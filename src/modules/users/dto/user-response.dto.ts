@@ -9,4 +9,5 @@ export class UserResponseDto {
   birthDate?: string;
   avatarUrl?: string;
   isBanned?: boolean;
+  role?:string
 }

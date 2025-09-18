@@ -1,3 +1,4 @@
+import { Role } from '@/common/types/user.types';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
@@ -11,6 +12,9 @@ export class User extends Document {
 
   @Prop({ unique: true, required: true })
   username: string;
+
+@Prop({ type: String, enum: Role, default: Role.User })
+role: Role;
 
   @Prop()
   name: string;

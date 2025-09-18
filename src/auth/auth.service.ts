@@ -57,13 +57,14 @@ export class AuthService {
       name: user.name,
       isActive: user.isActive,
       isBanned: user.isBanned,
+      role:user.role
     };
 
     return result;
   }
 
   async generateRefreshToken(user: UserResponseDto): Promise<string> {
-    const payLoadRefreshToken = { sub: user._id, type: 'refresh' };
+    const payLoadRefreshToken = { sub: user._id, type: 'refresh',role:user.role };
     const refresh_token = await this.jwtService.signAsync(payLoadRefreshToken, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRED'),
@@ -105,6 +106,7 @@ export class AuthService {
         sub: user._id,
         email: user.email,
         type: 'accessToken',
+        role:user.role
       };
       const access_token = await this.jwtService.signAsync(payLoadAccessToken);
       this.logger.log('Generate access token');
@@ -173,7 +175,7 @@ export class AuthService {
   async register(data: RegisterDto): Promise<AuthResponseDto> {
     try {
       if (!data) throw new BadRequestException('Invalid request data');
-
+  
       const isEmailExist = await this.usersService.isEmailExist(data.email);
       if (isEmailExist)
         throw new ConflictException(

@@ -17,7 +17,7 @@ export class MailService {
         template: 'verify-account',
         context: {
           appName: 'AOV Squad Finder',
-          name: ctx?.name ?? 'Bạn',
+          name: ctx?.name ?? 'You',
           verifyUrl,
           expiresIn: ctx?.expiresIn ?? 15,
           supportEmail: 'support@example.com',
@@ -40,7 +40,7 @@ export class MailService {
         template: 'reset-password',
         context: {
           appName: 'AOV Squad Finder',
-          name: ctx?.name ?? 'Bạn',
+          name: ctx?.name ?? 'You',
           otpCode,
           expiresIn: ctx?.expiresIn ?? 5,
           supportEmail: 'support@example.com',

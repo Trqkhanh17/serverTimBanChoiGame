@@ -35,3 +35,8 @@ export interface checkPasswordInPut {
   userId: string;
   password: string;
 }
+
+export enum Role {
+  User = 'user',
+  Admin = 'admin',
+}
