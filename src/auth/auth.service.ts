@@ -10,10 +10,6 @@ import {
 } from '@nestjs/common';
 import { UsersService } from 'src/modules/users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import {
-  comparePasswordHelper,
-  hashPasswordHelper,
-} from '@/common/helpers/ulti';
 import { ConfigService } from '@nestjs/config';
 import { UpdateUserDto } from '@/auth/dto/update-user.dto';
 import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
@@ -34,6 +30,7 @@ import { OtpService } from '@/modules/otp/otp.service';
 import e from 'express';
 import internal from 'stream';
 import { ChangePasswordDto } from '@/auth/dto/change-password.dto';
+import { compareHelper, hashHelper } from '@/common/helpers/ulti';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -48,7 +45,7 @@ export class AuthService {
   async validateUser(userName: string, pass: string): Promise<AuthUser | null> {
     const user = await this.usersService.findByEmailForAuth(userName);
     if (!user) return null;
-    const isValidPassword = await comparePasswordHelper(pass, user.password);
+    const isValidPassword = await compareHelper(pass, user.password);
     if (!isValidPassword) return null;
     const result = {
       _id: user._id.toString(),
@@ -57,14 +54,18 @@ export class AuthService {
       name: user.name,
       isActive: user.isActive,
       isBanned: user.isBanned,
-      role:user.role
+      role: user.role,
     };
 
     return result;
   }
 
   async generateRefreshToken(user: UserResponseDto): Promise<string> {
-    const payLoadRefreshToken = { sub: user._id, type: 'refresh',role:user.role };
+    const payLoadRefreshToken = {
+      sub: user._id,
+      type: 'refresh',
+      role: user.role,
+    };
     const refresh_token = await this.jwtService.signAsync(payLoadRefreshToken, {
       secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRED'),
@@ -106,7 +107,7 @@ export class AuthService {
         sub: user._id,
         email: user.email,
         type: 'accessToken',
-        role:user.role
+        role: user.role,
       };
       const access_token = await this.jwtService.signAsync(payLoadAccessToken);
       this.logger.log('Generate access token');
@@ -175,7 +176,7 @@ export class AuthService {
   async register(data: RegisterDto): Promise<AuthResponseDto> {
     try {
       if (!data) throw new BadRequestException('Invalid request data');
-  
+
       const isEmailExist = await this.usersService.isEmailExist(data.email);
       if (isEmailExist)
         throw new ConflictException(
@@ -188,7 +189,7 @@ export class AuthService {
         throw new ConflictException(
           `Email ${data.username} is already in use, please choose another one`,
         );
-      const passwordHash = await hashPasswordHelper(data.password);
+      const passwordHash = await hashHelper(data.password);
       const dataCreateInput: UserCreateInput = {
         email: data.email,
         passwordHash: passwordHash,
@@ -359,14 +360,16 @@ export class AuthService {
     const user = await this.usersService.findUserByEmail(email);
     if (!user) throw new BadRequestException('User not found with this email');
     try {
+      const otpCode = uuidv4();
       const otpInput: CreateOtpInput = {
         userId: user._id,
         expiresInMinutes: 5,
-        purpose: 'reset_password',
+        otpCode: otpCode,
+        purpose: 'forgot_password',
       };
       const otp = await this.otpService.createOtp(otpInput);
       if (!otp) throw new BadRequestException();
-      await this.mailService.sendOtpForgotPassword(email, otp.otpCode, {
+      await this.mailService.sendOtpForgotPassword(email, otpCode, {
         name: user.name ?? user.email,
         expiresIn: 5,
       });
@@ -379,7 +382,7 @@ export class AuthService {
       if (!user) throw new BadRequestException();
       const inputVerifyOtp: verifyOtpInput = {
         otpCode: otpCode,
-        purpose: 'reset_password',
+        purpose: 'forgot_password',
         userId: user._id,
       };
       const verifyOtp = await this.otpService.verifyOtp(inputVerifyOtp);
@@ -390,4 +393,6 @@ export class AuthService {
       throw new InternalServerErrorException();
     }
   }
+
+  async changePasswordForgot() {}
 }

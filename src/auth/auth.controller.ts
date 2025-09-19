@@ -20,17 +20,21 @@ import { RegisterDto } from '@/auth/dto/register.Dto';
 import { EmailValidateDto } from '@/auth/dto/forgot-password.dto';
 import { ChangePasswordDto } from '@/auth/dto/change-password.dto';
 import { InputChangePasswordAuth } from '@/common/types/auth.types';
+import { ChangePasswordForget } from '@/auth/dto/change.password.forgot.dto';
+import { Throttle } from '@nestjs/throttler';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @UseGuards(LocalAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('login')
   @HttpCode(200)
   async login(@Request() req) {
     return await this.authService.login(req.user);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('register')
   @HttpCode(201)
   async register(@Body() data: RegisterDto) {
@@ -89,7 +93,9 @@ export class AuthController {
   }
 
   @Patch('change-password-forgot')
-  async changePasswordForgot(@Body() input) {}
+  async changePasswordForgot(@Body() body: ChangePasswordForget) {
+    return this.authService.changePasswordForgot();
+  }
 
   @UseGuards(JwtRefreshGuard)
   @Delete('logout')

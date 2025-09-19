@@ -36,8 +36,8 @@ export class MailService {
     try {
       await this.mailerService.sendMail({
         to: email,
-        subject: 'Your OTP Code to reset password – AOV Squad Finder',
-        template: 'reset-password',
+        subject: 'Your OTP Code to forgot password – AOV Squad Finder',
+        template: 'forgot-password',
         context: {
           appName: 'AOV Squad Finder',
           name: ctx?.name ?? 'You',

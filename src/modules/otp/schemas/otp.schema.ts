@@ -13,7 +13,7 @@ export class Otp {
   @Prop({ required: true })
   otpExpiresAt: Date;
 
-  @Prop({ required: true, enum: ['reset_phone', 'reset_password'] })
+  @Prop({ required: true, enum: ['reset_phone', 'forgot_password'] })
   purpose: OtpPurpose;
 
   @Prop({ default: false })

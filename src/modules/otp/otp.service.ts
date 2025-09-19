@@ -1,3 +1,4 @@
+import { hashHelper } from '@/common/helpers/ulti';
 import {
   CreateOtpInput,
   OtpDocument,
@@ -21,11 +22,12 @@ export class OtpService {
   // Tạo OTP mới
   async createOtp(otpInput: CreateOtpInput) {
     try {
-      const { expiresInMinutes, purpose, userId } = otpInput;
-      const otpCode = uuidv4();
+      const { expiresInMinutes, purpose, userId, otpCode } = otpInput;
+      const OtpCodeHash = await hashHelper(otpCode);
+      console.log(OtpCodeHash);
       const otp = new this.otpModel({
         userId,
-        otpCode,
+        otpCode: OtpCodeHash,
         purpose,
         otpExpiresAt: new Date(Date.now() + expiresInMinutes * 60000),
       });

@@ -10,10 +10,6 @@ import { Model } from 'mongoose';
 import { User } from 'src/modules/users/schemas/user.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import {
-  comparePasswordHelper,
-  hashPasswordHelper,
-} from '@/common/helpers/ulti';
-import {
   changePasswordInPut,
   checkPasswordInPut,
   UserCreateInput,
@@ -21,6 +17,7 @@ import {
   UserUpdateInput,
 } from '@/common/types/user.types';
 import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
+import { compareHelper, hashHelper } from '@/common/helpers/ulti';
 
 @Injectable()
 export class UsersService {
@@ -190,7 +187,7 @@ export class UsersService {
       const user = await this.findUserById(userId);
       if (!user) throw new BadRequestException();
       const currentPassword = user.password;
-      const isMatch = await comparePasswordHelper(password, currentPassword);
+      const isMatch = await compareHelper(password, currentPassword);
       if (!isMatch) return false;
       return true;
     } catch (error) {
@@ -203,7 +200,7 @@ export class UsersService {
     try {
       const { userId, newPassword } = dataForChangePassword;
 
-      const hashedPass = await hashPasswordHelper(newPassword);
+      const hashedPass = await hashHelper(newPassword);
 
       const updatedUser = await this.userModel.findOneAndUpdate(
         { _id: userId },

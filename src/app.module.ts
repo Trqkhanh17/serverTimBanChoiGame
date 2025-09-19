@@ -9,11 +9,23 @@ import { GameProfileModule } from './modules/game-profile/game-profile.module';
 import { FriendModule } from './modules/friend/friend.module';
 import { MatchSearchModule } from './modules/match-search/match-search.module';
 import { OtpModule } from './modules/otp/otp.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ThrottlerModule.forRootAsync({
+      useFactory: () => [
+        {
+          name: 'default',
+          ttl: 60000,
+          limit: 100,
+        },
+      ],
+    }),
+
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -29,6 +41,6 @@ import { OtpModule } from './modules/otp/otp.module';
     OtpModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

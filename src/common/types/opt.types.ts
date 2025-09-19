@@ -3,6 +3,7 @@ import { Otp } from '@/modules/otp/schemas/otp.schema';
 export interface CreateOtpInput {
   userId: string;
   purpose: OtpPurpose;
+  otpCode: string;
   expiresInMinutes: number;
 }
 export interface verifyOtpInput {
@@ -12,4 +13,4 @@ export interface verifyOtpInput {
 }
 export type OtpDocument = Otp & Document;
 
-export type OtpPurpose = 'reset_phone' | 'reset_password';
+export type OtpPurpose = 'reset_phone' | 'forgot_password';
