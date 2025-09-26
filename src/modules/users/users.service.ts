@@ -224,9 +224,10 @@ export class UsersService {
 
   async addRefreshTokenToDB(token: string, userId: string): Promise<boolean> {
     try {
+      const HashRefreshToken = await hashHelper(token);
       const user = await this.userModel.findOneAndUpdate(
         { _id: userId },
-        { $set: { refreshToken: token } },
+        { $set: { refreshToken: HashRefreshToken } },
         { new: true },
       );
 
@@ -325,16 +326,21 @@ export class UsersService {
     }
   }
   async setVerifyJti(userId: string, jti: string): Promise<boolean> {
+    const jtiHash = await hashHelper(jti);
     const user = await this.userModel.updateOne(
       { _id: userId },
-      { $set: { verifyJti: jti } },
+      { $set: { verifyJti: jtiHash } },
     );
     if (!user) return false;
     return true;
   }
   async consumeVerifyJti(userId: string, jti: string): Promise<boolean> {
+    const user = await this.findUserById(userId);
+    if (!user || !user.verifyJti) return false;
+    const isValid = await compareHelper(jti, user.verifyJti);
+    if (!isValid) return false;
     const res = await this.userModel.updateOne(
-      { _id: userId, verifyJti: jti },
+      { _id: userId, isActive: false },
       {
         $set: { isActive: true, emailVerifiedAt: new Date(), verifyJti: null },
       },

@@ -1,5 +1,4 @@
 import {
-  BadGatewayException,
   BadRequestException,
   ConflictException,
   Injectable,
@@ -20,16 +19,12 @@ import {
   changePasswordInPut,
   checkPasswordInPut,
   UserCreateInput,
-  UserDocument,
   UserUpdateInput,
 } from '@/common/types/user.types';
 import { v4 as uuidv4 } from 'uuid';
 import { MailService } from '@/mail/mail.service';
 import { CreateOtpInput, verifyOtpInput } from '@/common/types/opt.types';
 import { OtpService } from '@/modules/otp/otp.service';
-import e from 'express';
-import internal from 'stream';
-import { ChangePasswordDto } from '@/auth/dto/change-password.dto';
 import { compareHelper, hashHelper } from '@/common/helpers/ulti';
 @Injectable()
 export class AuthService {
@@ -47,9 +42,10 @@ export class AuthService {
     if (!user) return null;
     const isValidPassword = await compareHelper(pass, user.password);
     if (!isValidPassword) return null;
+    const emailToLowerCase = user.email.toLowerCase().trim();
     const result = {
       _id: user._id.toString(),
-      email: user.email,
+      email: emailToLowerCase,
       username: user.username,
       name: user.name,
       isActive: user.isActive,
@@ -101,7 +97,11 @@ export class AuthService {
       );
       if (!RefreshTokenInDatabase)
         throw new UnauthorizedException('Refresh token invalid');
-      if (refreshToken !== RefreshTokenInDatabase)
+      const checkRefreshToken = await compareHelper(
+        refreshToken,
+        RefreshTokenInDatabase,
+      );
+      if (!checkRefreshToken)
         throw new UnauthorizedException('Refresh token invalid');
       const payLoadAccessToken = {
         sub: user._id,
@@ -176,8 +176,8 @@ export class AuthService {
   async register(data: RegisterDto): Promise<AuthResponseDto> {
     try {
       if (!data) throw new BadRequestException('Invalid request data');
-
-      const isEmailExist = await this.usersService.isEmailExist(data.email);
+      const emailLowerCase = data.email.toLowerCase().trim();
+      const isEmailExist = await this.usersService.isEmailExist(emailLowerCase);
       if (isEmailExist)
         throw new ConflictException(
           `Email ${data.email} is already in use, please choose another one`,
@@ -191,7 +191,7 @@ export class AuthService {
         );
       const passwordHash = await hashHelper(data.password);
       const dataCreateInput: UserCreateInput = {
-        email: data.email,
+        email: emailLowerCase,
         passwordHash: passwordHash,
         username: data.username,
         name: data.name,

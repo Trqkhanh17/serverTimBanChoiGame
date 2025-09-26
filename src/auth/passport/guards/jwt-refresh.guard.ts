@@ -4,7 +4,6 @@ export class JwtRefreshGuard extends AuthGuard('jwt-refresh') {
   handleRequest(err, user, info, context) {
     const req = context.switchToHttp().getRequest();
 
-    // Lấy raw token từ header
     const authHeader = req.headers['authorization'];
     const refreshToken = authHeader?.replace('Bearer ', '');
 
@@ -12,7 +11,6 @@ export class JwtRefreshGuard extends AuthGuard('jwt-refresh') {
       throw err || new UnauthorizedException();
     }
 
-    // Gắn thêm refreshToken vào request
     req.refreshToken = refreshToken;
 
     return user; // user = payload decode từ JWT

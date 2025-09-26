@@ -19,41 +19,48 @@ import { UpdateUserDto } from '@/auth/dto/update-user.dto';
 import { RegisterDto } from '@/auth/dto/register.Dto';
 import { EmailValidateDto } from '@/auth/dto/forgot-password.dto';
 import { ChangePasswordDto } from '@/auth/dto/change-password.dto';
-import { InputChangePasswordAuth } from '@/common/types/auth.types';
+import type {
+  InputChangePasswordAuth,
+  RequestWithUser,
+  RequestWithUserAndRefreshToken,
+} from '@/common/types/auth.types';
 import { ChangePasswordForget } from '@/auth/dto/change.password.forgot.dto';
-import { Throttle } from '@nestjs/throttler';
+import { minutes, Throttle } from '@nestjs/throttler';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @UseGuards(LocalAuthGuard)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({
+    default: { limit: 10, ttl: minutes(1), blockDuration: minutes(5) },
+  })
   @Post('login')
   @HttpCode(200)
-  async login(@Request() req) {
+  async login(@Request() req: RequestWithUser) {
     return await this.authService.login(req.user);
   }
 
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({
+    default: { limit: 3, ttl: minutes(1), blockDuration: minutes(5) },
+  })
   @Post('register')
   @HttpCode(201)
   async register(@Body() data: RegisterDto) {
-    console.log('dto: ', data);
     return await this.authService.register(data);
   }
 
   @UseGuards(JwtAccessGuard)
   @Get('profile')
   @HttpCode(200)
-  async getProfileUser(@Request() req) {
+  async getProfileUser(@Request() req: RequestWithUser) {
     const user = req.user;
     return await this.authService.getProfileUser(user);
   }
 
-  @Post('refresh')
   @UseGuards(JwtRefreshGuard)
+  @Post('refresh')
   @HttpCode(200)
-  async refresh(@Request() req) {
+  async refresh(@Request() req: RequestWithUserAndRefreshToken) {
     const { user, refreshToken } = await req;
     const access_token = await this.authService.generateAccessToken(
       user,
@@ -64,15 +71,24 @@ export class AuthController {
     };
   }
 
-  @Patch('profile')
   @UseGuards(JwtAccessGuard)
+  @Throttle({
+    default: { limit: 120, ttl: minutes(1), blockDuration: minutes(1) },
+  })
+  @Patch('profile')
   @HttpCode(200)
-  async updateProfile(@Request() req, @Body() body: UpdateUserDto) {
+  async updateProfile(
+    @Request() req: RequestWithUser,
+    @Body() body: UpdateUserDto,
+  ) {
     const { user } = req;
     if (!user) throw new BadRequestException();
     return this.authService.updateProfileUser(user._id, body);
   }
 
+  @Throttle({
+    default: { limit: 3, ttl: minutes(5), blockDuration: minutes(5) },
+  })
   @Post('forgot-password')
   @HttpCode(201)
   async forgotPassword(@Body() input: EmailValidateDto) {
@@ -80,8 +96,14 @@ export class AuthController {
   }
 
   @UseGuards(JwtAccessGuard)
+  @Throttle({
+    default: { limit: 3, ttl: minutes(15), blockDuration: minutes(15) },
+  })
   @Patch('change-password')
-  async changePassword(@Request() req, @Body() data: ChangePasswordDto) {
+  async changePassword(
+    @Request() req: RequestWithUser,
+    @Body() data: ChangePasswordDto,
+  ) {
     const userId = req.user._id;
     const inPutChangePassword: InputChangePasswordAuth = {
       comFirmPassword: data.comFirmPassword,
@@ -99,7 +121,7 @@ export class AuthController {
 
   @UseGuards(JwtRefreshGuard)
   @Delete('logout')
-  async logOut(@Request() req) {
+  async logOut(@Request() req: RequestWithUser) {
     return await this.authService.logout(req.user._id);
   }
 

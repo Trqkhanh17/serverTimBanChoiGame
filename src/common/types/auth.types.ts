@@ -1,3 +1,5 @@
+import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
+
 export interface AuthUser {
   _id: string;
   email: string;
@@ -14,4 +16,10 @@ export interface InputChangePasswordAuth {
   userId: string;
 }
 
-// export interface
+export interface RequestWithUser extends Request {
+  user: UserResponseDto;
+}
+export interface RequestWithUserAndRefreshToken extends Request {
+  user: UserResponseDto;
+  refreshToken: string;
+}

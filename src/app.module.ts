@@ -9,7 +9,7 @@ import { GameProfileModule } from './modules/game-profile/game-profile.module';
 import { FriendModule } from './modules/friend/friend.module';
 import { MatchSearchModule } from './modules/match-search/match-search.module';
 import { OtpModule } from './modules/otp/otp.module';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { minutes, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 @Module({
   imports: [
@@ -17,11 +17,15 @@ import { APP_GUARD } from '@nestjs/core';
       isGlobal: true,
     }),
     ThrottlerModule.forRootAsync({
-      useFactory: () => [
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => [
         {
           name: 'default',
-          ttl: 60000,
-          limit: 100,
+          ttl: minutes(
+            Number(configService.get<string>('RATE_LIMIT_DEFAULT_TTL')),
+          ),
+          limit: Number(configService.get<string>('RATE_LIMIT_DEFAULT_TTL')),
         },
       ],
     }),
