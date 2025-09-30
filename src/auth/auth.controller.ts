@@ -61,10 +61,11 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(200)
   async refresh(@Request() req: RequestWithUserAndRefreshToken) {
-    const { user, refreshToken } = await req;
+    const { user, refreshToken } = req;
     const access_token = await this.authService.generateAccessToken(
       user,
       refreshToken,
+      user.tokenVersion,
     );
     return {
       access_token,
@@ -90,7 +91,7 @@ export class AuthController {
     default: { limit: 3, ttl: minutes(5), blockDuration: minutes(5) },
   })
   @Post('forgot-password')
-  @HttpCode(201)
+  @HttpCode(202)
   async forgotPassword(@Body() input: EmailValidateDto) {
     await this.authService.sendUserForgotPassword(input.email.toString());
   }
@@ -130,4 +131,6 @@ export class AuthController {
     const result = await this.authService.verifyEmailToken(token);
     return result;
   }
+  @Post('forgot-password-verify')
+  async verifyOtpForgot() {}
 }

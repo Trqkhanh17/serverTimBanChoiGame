@@ -102,9 +102,9 @@ export class UsersService {
     }
   }
 
-  async getProfileUser(email: string): Promise<UserResponseDto | null> {
+  async getProfileUser(_id: string): Promise<UserResponseDto | null> {
     try {
-      const user = await this.findUserByEmail(email);
+      const user = await this.findUserById(_id);
       if (!user) return null;
 
       const result: UserResponseDto = {
@@ -124,7 +124,7 @@ export class UsersService {
       if (error instanceof HttpException) {
         throw error;
       }
-      this.logger.error(`Error getting user profile: ${email}`, error.stack);
+      this.logger.error(`Error getting user profile: ${_id}`, error.stack);
       throw new InternalServerErrorException('Failed to retrieve user profile');
     }
   }
@@ -252,6 +252,22 @@ export class UsersService {
     } catch (error) {
       this.logger.error(
         `Database error checking refresh token: ${_id}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException('Database query failed');
+    }
+  }
+
+  async getRefreshTokenVersion(_id: string): Promise<number | null> {
+    try {
+      const user = await this.userModel
+        .findOne({ _id })
+        .select({ refreshTokenVersion: 1, _id: 0 })
+        .lean();
+      return user?.refreshTokenVersion ?? null;
+    } catch (error) {
+      this.logger.error(
+        `Database error get RefreshTokenVersion: ${_id}`,
         error.stack,
       );
       throw new InternalServerErrorException('Database query failed');

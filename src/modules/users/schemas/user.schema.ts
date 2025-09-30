@@ -7,14 +7,14 @@ export class User extends Document {
   @Prop({ unique: true, required: true })
   email: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, select: false })
   password: string;
 
   @Prop({ unique: true, required: true })
   username: string;
 
-@Prop({ type: String, enum: Role, default: Role.User })
-role: Role;
+  @Prop({ type: String, enum: Role, default: Role.User })
+  role: Role;
 
   @Prop()
   name: string;
@@ -45,6 +45,9 @@ role: Role;
 
   @Prop({ select: false })
   refreshToken: string;
+
+  @Prop({ select: false, default: 0 })
+  refreshTokenVersion: number;
 
   @Prop({ default: false })
   isBanned: boolean;

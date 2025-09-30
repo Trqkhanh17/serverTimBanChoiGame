@@ -57,9 +57,13 @@ export class AuthService {
   }
 
   async generateRefreshToken(user: UserResponseDto): Promise<string> {
+    const tokenVersion = await this.usersService.getRefreshTokenVersion(
+      user._id,
+    );
     const payLoadRefreshToken = {
       sub: user._id,
       type: 'refresh',
+      tokenVersion: tokenVersion,
       role: user.role,
     };
     const refresh_token = await this.jwtService.signAsync(payLoadRefreshToken, {
@@ -88,10 +92,12 @@ export class AuthService {
   async generateAccessToken(
     user: UserResponseDto,
     refreshToken: string,
+    tokenVersion: number | undefined,
   ): Promise<string> {
     try {
       const checkUser = await this.usersService.findUserById(user._id);
       if (!checkUser) throw new BadRequestException();
+      const email = checkUser.email;
       const RefreshTokenInDatabase = await this.usersService.getRefreshToken(
         user._id,
       );
@@ -103,9 +109,15 @@ export class AuthService {
       );
       if (!checkRefreshToken)
         throw new UnauthorizedException('Refresh token invalid');
+      const tokenVersionInDB = await this.usersService.getRefreshTokenVersion(
+        user._id,
+      );
+
+      if (tokenVersionInDB != tokenVersion)
+        throw new UnauthorizedException('Refresh token invalid');
       const payLoadAccessToken = {
         sub: user._id,
-        email: user.email,
+        email: email,
         type: 'accessToken',
         role: user.role,
       };
@@ -146,8 +158,15 @@ export class AuthService {
       if (!user) throw new BadRequestException();
       const refresh_token = await this.generateRefreshToken(user);
       await this.usersService.addRefreshTokenToDB(refresh_token, user._id);
-
-      const access_token = await this.generateAccessToken(user, refresh_token);
+      const tokenVersion = await this.usersService.getRefreshTokenVersion(
+        user._id,
+      );
+      const changeTypeToken = Number(tokenVersion);
+      const access_token = await this.generateAccessToken(
+        user,
+        refresh_token,
+        changeTypeToken,
+      );
 
       const dataUserForClient: UserResponseDto = {
         _id: user._id,
@@ -202,7 +221,15 @@ export class AuthService {
         refresh_token,
         user._id,
       );
-      const access_token = await this.generateAccessToken(user, refresh_token);
+      const tokenVersionInDB = await this.usersService.getRefreshTokenVersion(
+        user._id,
+      );
+      const tokenVersion = Number(tokenVersionInDB);
+      const access_token = await this.generateAccessToken(
+        user,
+        refresh_token,
+        tokenVersion,
+      );
 
       if (!added) {
         this.logger.error(`Failed to add refresh token for ${user.email}`);
@@ -236,9 +263,9 @@ export class AuthService {
   }
 
   async getProfileUser(user: UserResponseDto): Promise<UserResponseDto> {
-    const userProfile = await this.usersService.getProfileUser(user.email);
+    const userProfile = await this.usersService.getProfileUser(user._id);
     if (!userProfile)
-      throw new BadRequestException(`User ${user.email} no exist`);
+      throw new BadRequestException(`User ${user._id} no exist`);
     return userProfile;
   }
 
@@ -320,7 +347,7 @@ export class AuthService {
       const jti = uuidv4();
       const setVerifyJti = await this.usersService.setVerifyJti(user._id, jti);
       if (!setVerifyJti)
-        throw new BadRequestException('Faild to set VerifyJti');
+        throw new BadRequestException('Faild to set Ver ifyJti');
       const token = await this.generateVerifyEmail(user, jti);
       const verifyUrl = `${this.configService.get<string>('BACKEND_BASE_URL')}auth/verify-email?token=${encodeURIComponent(token)}`;
       await this.mailService.sendVerifyEmailUser(user.email, verifyUrl, {
@@ -393,6 +420,5 @@ export class AuthService {
       throw new InternalServerErrorException();
     }
   }
-
   async changePasswordForgot() {}
 }

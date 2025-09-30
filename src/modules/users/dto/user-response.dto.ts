@@ -10,4 +10,5 @@ export class UserResponseDto {
   avatarUrl?: string;
   isBanned?: boolean;
   role?: string;
+  tokenVersion?: number;
 }

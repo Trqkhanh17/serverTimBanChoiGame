@@ -38,7 +38,7 @@ export class OtpService {
   }
 
   // Verify OTP
-  async verifyOtp(input: verifyOtpInput) {
+  async verifyOtp(input: verifyOtpInput): Promise<boolean> {
     try {
       const { otpCode, purpose, userId } = input;
       const otp = await this.otpModel.findOne({
