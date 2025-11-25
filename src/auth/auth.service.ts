@@ -83,7 +83,7 @@ export class AuthService {
       {
         secret: this.configService.get<string>('JWT_EMAIL_VERIFY_SECRET'),
         expiresIn:
-          this.configService.get<string>('EMAIL_VERIFY_EXPIRE') ?? '15m',
+          this.configService.get<string>('JWT_EMAIL_VERIFY_EXPIRE') ?? '15m',
       },
     );
     return verifyEmail_token;
@@ -353,7 +353,9 @@ export class AuthService {
       const verifyUrl = `${this.configService.get<string>('BACKEND_BASE_URL')}auth/verify-email?token=${encodeURIComponent(token)}`;
       await this.mailService.sendVerifyEmailUser(user.email, verifyUrl, {
         name: user.name ?? user.email,
-        expiresIn: 15,
+        expiresIn: parseInt(
+          this.configService.get<string>('JWT_EMAIL_VERIFY_EXPIRE') ?? '15',
+        ),
       });
       this.logger.log(`Send mail to ${user.email} successfully`);
     } catch (error) {
@@ -391,7 +393,9 @@ export class AuthService {
       const otpCode = uuidv4();
       const otpInput: CreateOtpInput = {
         userId: user._id,
-        expiresInMinutes: 5,
+        expiresInMinutes: parseInt(
+          this.configService.get<string>('OTP_FORGOT_PASSWORD_EXPIRE') ?? '5',
+        ),
         otpCode: otpCode,
         purpose: 'forgot_password',
       };
@@ -399,9 +403,19 @@ export class AuthService {
       if (!otp) throw new BadRequestException();
       await this.mailService.sendOtpForgotPassword(email, otpCode, {
         name: user.name ?? user.email,
-        expiresIn: 5,
+        expiresIn: parseInt(
+          this.configService.get<string>('OTP_FORGOT_PASSWORD_EXPIRE') ?? '5',
+        ),
       });
-    } catch (error) {}
+    } catch (error) {
+      this.logger.error(
+        `Failed to send forgot password OTP to ${email}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        'Failed to send password reset email',
+      );
+    }
   }
 
   async verifyOtpForgotPassword(email: string, otpCode: string) {
