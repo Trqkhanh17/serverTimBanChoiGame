@@ -407,7 +407,15 @@ export class AuthService {
           this.configService.get<string>('OTP_FORGOT_PASSWORD_EXPIRE') ?? '5',
         ),
       });
-    } catch (error) {}
+    } catch (error) {
+      this.logger.error(
+        `Failed to send forgot password OTP to ${email}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        'Failed to send password reset email',
+      );
+    }
   }
 
   async verifyOtpForgotPassword(email: string, otpCode: string) {
