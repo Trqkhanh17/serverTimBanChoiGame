@@ -180,12 +180,13 @@ export class AuthService {
         gender: user.gender,
       };
       this.logger.log(`Login successful: ${user.email}`);
-      return {
+      const dataResponse = {
         message: 'Login successful',
         access_token: access_token,
         refresh_token: refresh_token,
         user: dataUserForClient,
       };
+      return dataResponse;
     } catch (error) {
       this.logger.error(`Login failed for user ${user?.email}`, error.stack);
       throw new InternalServerErrorException('Faild to Login');
