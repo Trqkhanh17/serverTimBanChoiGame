@@ -104,7 +104,7 @@ Base URL: `/api/v1`
   {
     "oldPassword": "old_password",
     "newPassword": "new_password",
-    "comFirmPassword": "new_password"
+    "confirmPassword": "new_password"
   }
   ```
 
@@ -112,7 +112,6 @@ Base URL: `/api/v1`
 
 - **URL:** `/auth/logout`
 - **Method:** `DELETE`
-- **Headers:** `Authorization: Bearer <access_token>` (Note: Code uses `JwtRefreshGuard` so it might expect Refresh Token, need to verify implementation details in `auth.controller.ts` - _Correction: It uses `JwtRefreshGuard`_)
 - **Headers:** `Authorization: Bearer <refresh_token>`
 
 ## Users
