@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # 1. SERVICE: DATABASE (MongoDB)
+  mongo:
+    image: mongo:6
+    container_name: my-mongo
+    ports:
+      - '27017:27017' # Cho phép máy ngoài (ví dụ Compass) kết nối vào xem DB
+    volumes:
+      - mongo_data:/data/db # Lưu dữ liệu ra ổ cứng thật để không mất khi tắt container
+
+  # 2. SERVICE: APP (NestJS)
+  api:
+    build: . # Build từ Dockerfile ở thư mục hiện tại
+    container_name: my-server
+    ports:
+      - '8080:8080' # Map cổng ra ngoài
+    depends_on:
+      - mongo # Chờ MongoDB chạy trước rồi mới chạy App
+    env_file:
+      - .env # Đọc các biến môi trường khác
+    environment:
+      # GHI ĐÈ biến MONGODB_URI để trỏ vào service 'mongo' bên trên
+      # "mongo" ở đây chính là tên service (hostname) trong mạng nội bộ Docker
+      - MONGODB_URI=mongodb://mongo:27017/my_database_name
+
+    # [DEV MODE] Cấu hình để sửa code là server tự cập nhật (Hot Reload)
+    volumes:
+      - .:/app # "Đục lỗ" nối thư mục code máy bạn vào trong container
+      - /app/node_modules # Giữ riêng thư viện của container (tránh xung đột với máy thật)
+    command: npm run start:dev # Chạy lệnh dev thay vì lệnh prod mặc định
+
+volumes:
+  mongo_data: # Khai báo volume để lưu dữ liệu bền vững

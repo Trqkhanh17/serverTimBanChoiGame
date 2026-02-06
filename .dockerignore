@@ -1,0 +1,10 @@
+# Các file/thư mục này sẽ KHÔNG được copy vào Docker Image
+# Giúp Image nhẹ hơn và build nhanh hơn, bảo mật hơn (không lộ .env hay .git)
+
+node_modules
+dist
+.git
+.gitignore
+.env
+Dockerfile
+README.md

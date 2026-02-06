@@ -32,6 +32,13 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  // Simple Logging Middleware
+  app.use((req, res, next) => {
+    console.log(
+      `[Request] ${new Date().toLocaleString('vi-VN')} ${req.method} ${req.url}`,
+    );
+    next();
+  });
   app.setGlobalPrefix('api/v1');
   await app.listen(port);
 }
