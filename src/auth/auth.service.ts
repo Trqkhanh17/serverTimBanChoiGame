@@ -350,7 +350,7 @@ export class AuthService {
       if (!setVerifyJti)
         throw new BadRequestException('Faild to set Ver ifyJti');
       const token = await this.generateVerifyEmail(user, jti);
-      const verifyUrl = `${this.configService.get<string>('BACKEND_BASE_URL')}auth/verify-email?token=${encodeURIComponent(token)}`;
+      const verifyUrl = `${this.configService.get<string>('BACKEND_BASE_URL')}/api/v1/auth/verify-email?token=${encodeURIComponent(token)}`;
       await this.mailService.sendVerifyEmailUser(user.email, verifyUrl, {
         name: user.name ?? user.email,
         expiresIn: parseInt(

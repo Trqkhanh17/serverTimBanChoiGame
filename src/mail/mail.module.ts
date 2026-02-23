@@ -16,7 +16,7 @@ import { join } from 'path';
       useFactory: (configService: ConfigService) => {
         const host = configService.get<string>('MAIL_HOST')!;
         const port = Number(configService.get('MAIL_PORT') ?? 587);
-        const secure = port;
+        const secure = port === 465;
         return {
           transport: {
             host,
