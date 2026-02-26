@@ -1,4 +1,5 @@
 import { Otp } from '@/modules/otp/schemas/otp.schema';
+import { Document } from 'mongoose';
 
 export interface CreateOtpInput {
   userId: string;
