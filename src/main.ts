@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
+import { API_PREFIX } from './common/constants/api.constants';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -32,7 +33,14 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  app.setGlobalPrefix('api/v1');
+  // Simple Logging Middleware
+  app.use((req, res, next) => {
+    console.log(
+      `[Request] ${new Date().toLocaleString('vi-VN')} ${req.method} ${req.url}`,
+    );
+    next();
+  });
+  app.setGlobalPrefix(API_PREFIX);
   await app.listen(port);
 }
 bootstrap();

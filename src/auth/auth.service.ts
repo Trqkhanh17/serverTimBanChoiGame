@@ -26,6 +26,7 @@ import { MailService } from '@/mail/mail.service';
 import { CreateOtpInput, verifyOtpInput } from '@/common/types/opt.types';
 import { OtpService } from '@/modules/otp/otp.service';
 import { compareHelper, hashHelper } from '@/common/helpers/ulti';
+import { API_PREFIX } from '@/common/constants/api.constants';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -350,7 +351,7 @@ export class AuthService {
       if (!setVerifyJti)
         throw new BadRequestException('Faild to set Ver ifyJti');
       const token = await this.generateVerifyEmail(user, jti);
-      const verifyUrl = `${this.configService.get<string>('BACKEND_BASE_URL')}auth/verify-email?token=${encodeURIComponent(token)}`;
+      const verifyUrl = `${this.configService.get<string>('BACKEND_BASE_URL')}/${API_PREFIX}/auth/verify-email?token=${encodeURIComponent(token)}`;
       await this.mailService.sendVerifyEmailUser(user.email, verifyUrl, {
         name: user.name ?? user.email,
         expiresIn: parseInt(

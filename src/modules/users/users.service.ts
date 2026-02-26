@@ -19,19 +19,18 @@ import {
 import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
 import { compareHelper, hashHelper } from '@/common/helpers/ulti';
 
+import { UsersRepository } from './users.repository';
+
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
   async findByEmailForAuth(email: string): Promise<UserDocument | null> {
     try {
       const norm = email.trim().toLowerCase();
-      const user = await this.userModel
-        .findOne({ email: norm })
-        .select('+password')
-        .lean();
+      const user = await this.usersRepository.findByEmailWithPassword(norm);
       return user || null;
     } catch (error) {
       this.logger.error(
@@ -45,7 +44,7 @@ export class UsersService {
   async findUserByEmail(email: string): Promise<UserDocument | null> {
     try {
       const norm = email.trim().toLowerCase();
-      const user = await this.userModel.findOne({ email: norm }).lean();
+      const user = await this.usersRepository.findOne({ email: norm });
       return user || null;
     } catch (error) {
       this.logger.error(
@@ -57,7 +56,7 @@ export class UsersService {
   }
   async isEmailExist(email: string): Promise<boolean> {
     try {
-      const user = await this.userModel.exists({ email });
+      const user = await this.usersRepository.exists({ email });
       return !!user;
     } catch (error) {
       this.logger.error(
@@ -70,7 +69,7 @@ export class UsersService {
 
   async isUserNameExist(username: string): Promise<boolean> {
     try {
-      const user = await this.userModel.exists({ username });
+      const user = await this.usersRepository.exists({ username });
       return !!user;
     } catch (error) {
       this.logger.error(
@@ -85,7 +84,7 @@ export class UsersService {
     try {
       const { email, passwordHash, username, name } = dataInput;
 
-      const user = await this.userModel.create({
+      const user = await this.usersRepository.create({
         email,
         password: passwordHash,
         username,
@@ -131,7 +130,7 @@ export class UsersService {
 
   async findUserById(userId: string): Promise<UserDocument | null> {
     try {
-      const user = await this.userModel.findById({ _id: userId }).lean();
+      const user = await this.usersRepository.findById(userId);
       return user || null;
     } catch (error) {
       this.logger.error(
@@ -147,11 +146,9 @@ export class UsersService {
     data: UserUpdateInput,
   ): Promise<UserResponseDto | null> {
     try {
-      const user = await this.userModel.findByIdAndUpdate(
-        { _id: userId },
-        { $set: data },
-        { new: true },
-      );
+      const user = await this.usersRepository.findByIdAndUpdate(userId, {
+        $set: data,
+      });
 
       if (!user) return null;
 
@@ -202,10 +199,9 @@ export class UsersService {
 
       const hashedPass = await hashHelper(newPassword);
 
-      const updatedUser = await this.userModel.findOneAndUpdate(
+      const updatedUser = await this.usersRepository.findOneAndUpdate(
         { _id: userId },
         { $set: { password: hashedPass } },
-        { new: true },
       );
 
       if (!updatedUser) return false;
@@ -225,10 +221,9 @@ export class UsersService {
   async addRefreshTokenToDB(token: string, userId: string): Promise<boolean> {
     try {
       const HashRefreshToken = await hashHelper(token);
-      const user = await this.userModel.findOneAndUpdate(
+      const user = await this.usersRepository.findOneAndUpdate(
         { _id: userId },
         { $set: { refreshToken: HashRefreshToken } },
-        { new: true },
       );
 
       return !!user;
@@ -244,10 +239,10 @@ export class UsersService {
 
   async getRefreshToken(_id: string): Promise<string | null> {
     try {
-      const user = await this.userModel
-        .findOne({ _id, refreshToken: { $exists: true, $ne: null } })
-        .select('refreshToken')
-        .lean();
+      const user = await this.usersRepository.findOne(
+        { _id, refreshToken: { $exists: true, $ne: null } },
+        'refreshToken',
+      );
       return user?.refreshToken ? user.refreshToken : null;
     } catch (error) {
       this.logger.error(
@@ -260,10 +255,10 @@ export class UsersService {
 
   async getRefreshTokenVersion(_id: string): Promise<number | null> {
     try {
-      const user = await this.userModel
-        .findOne({ _id })
-        .select({ refreshTokenVersion: 1, _id: 0 })
-        .lean();
+      const user = await this.usersRepository.findOne(
+        { _id },
+        { refreshTokenVersion: 1, _id: 0 },
+      );
       return user?.refreshTokenVersion ?? null;
     } catch (error) {
       this.logger.error(
@@ -276,10 +271,9 @@ export class UsersService {
 
   async banUser(email: string): Promise<boolean> {
     try {
-      const result = await this.userModel.findOneAndUpdate(
+      const result = await this.usersRepository.findOneAndUpdate(
         { email },
         { $set: { isBanned: true } },
-        { new: true },
       );
 
       if (!result) return false;
@@ -296,7 +290,7 @@ export class UsersService {
     try {
       const checkRefreshToken = await this.getRefreshToken(_id);
       if (!checkRefreshToken) throw new UnauthorizedException();
-      const result = await this.userModel.updateOne(
+      const result = await this.usersRepository.updateOne(
         { _id },
         { $unset: { refreshToken: '' } },
       );
@@ -320,9 +314,9 @@ export class UsersService {
   }> {
     try {
       const [totalUsers, activeUsers, bannedUsers] = await Promise.all([
-        this.userModel.countDocuments(),
-        this.userModel.countDocuments({ isActive: true }),
-        this.userModel.countDocuments({ isBanned: true }),
+        this.usersRepository.countDocuments(),
+        this.usersRepository.countDocuments({ isActive: true }),
+        this.usersRepository.countDocuments({ isBanned: true }),
       ]);
 
       return { totalUsers, activeUsers, bannedUsers };
@@ -334,7 +328,7 @@ export class UsersService {
 
   async findUsersById(userIds: string[]): Promise<UserDocument[]> {
     try {
-      const users = await this.userModel.find({ _id: { $in: userIds } }).lean();
+      const users = await this.usersRepository.find({ _id: { $in: userIds } });
       return users;
     } catch (error) {
       this.logger.error('Database error finding users by IDs', error.stack);
@@ -343,7 +337,7 @@ export class UsersService {
   }
   async setVerifyJti(userId: string, jti: string): Promise<boolean> {
     const jtiHash = await hashHelper(jti);
-    const user = await this.userModel.updateOne(
+    const user = await this.usersRepository.updateOne(
       { _id: userId },
       { $set: { verifyJti: jtiHash } },
     );
@@ -355,7 +349,7 @@ export class UsersService {
     if (!user || !user.verifyJti) return false;
     const isValid = await compareHelper(jti, user.verifyJti);
     if (!isValid) return false;
-    const res = await this.userModel.updateOne(
+    const res = await this.usersRepository.updateOne(
       { _id: userId, isActive: false },
       {
         $set: { isActive: true, emailVerifiedAt: new Date(), verifyJti: null },
