@@ -1,29 +1,28 @@
-# 1. SETUP: Chọn "Hệ điều hành" nền (Base Image)
-# Chúng ta dùng node:20-alpine vì nó siêu nhẹ (Linux Alpine) và đã cài sẵn Node.js v20.
-FROM node:20-alpine
+# 1. BUILD STAGE: Install dependencies and compile TypeScript
+FROM node:20-alpine AS builder
 
-# 2. FOLDER: Tạo thư mục làm việc bên trong Container
-# Mọi lệnh sau dòng này sẽ chạy trong thư mục /app của Container
 WORKDIR /app
-
-# 3. CACHING: Copy file định nghĩa thư viện trước
-# Tại sao? Vì Docker có cơ chế cache theo layer. 
-# Nếu bạn chỉ sửa code (src/...) mà không sửa package.json, Docker sẽ bỏ qua bước npm install (lấy từ cache), giúp build siêu nhanh.
 COPY package*.json ./
+# Use npm ci for deterministic installs
+RUN npm ci
 
-# 4. INSTALL: Cài đặt thư viện
-RUN npm install
-
-# 5. CODE: Copy toàn bộ source code của bạn vào Container
-# (Trừ những file trong .dockerignore như node_modules, .git...)
 COPY . .
-
-# 6. BUILD: Chuyển đổi TypeScript sang JavaScript (thư mục dist)
 RUN npm run build
 
-# 7. NETWORK: Thông báo Container này sẽ "lắng nghe" ở port 8080
-# (Lưu ý: Chỉ là thông báo, cần map port lúc chạy container mới truy cập được)
+# 2. RUN STAGE: Keep only production dependencies and run the app
+FROM node:20-alpine
+
+WORKDIR /app
+COPY package*.json ./
+# Install only prod dependencies
+RUN npm ci --omit=dev && npm cache clean --force
+
+# Copy only the compiled output from builder
+COPY --from=builder /app/dist ./dist
+
+# Use the built-in non-root 'node' user for security
+USER node
+
 EXPOSE 8080
 
-# 8. START: Lệnh chạy chính thức khi Container khởi động
-CMD ["npm", "run", "start:prod"]
+CMD ["node", "dist/main.js"]
