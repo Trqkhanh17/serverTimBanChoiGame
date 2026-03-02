@@ -35,10 +35,10 @@ services:
       - MONGODB_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/my_database_name?authSource=admin
 
     # [DEV MODE] Cấu hình để sửa code là server tự cập nhật (Hot Reload)
-    volumes:
-      - .:/app # "Đục lỗ" nối thư mục code máy bạn vào trong container
-      - /app/node_modules # Giữ riêng thư viện của container (tránh xung đột với máy thật)
-    command: npm run start:dev # Chạy lệnh dev thay vì lệnh prod mặc định
+    # volumes:
+    #   - .:/app # "Đục lỗ" nối thư mục code máy bạn vào trong container
+    #   - /app/node_modules # Giữ riêng thư viện của container (tránh xung đột với máy thật)
+    # command: npm run start:dev # Chạy lệnh dev thay vì lệnh prod mặc định
 
 volumes:
   mongo_data: # Khai báo volume để lưu dữ liệu bền vững

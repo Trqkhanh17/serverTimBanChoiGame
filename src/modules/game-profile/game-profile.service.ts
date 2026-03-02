@@ -1,26 +1,53 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateGameProfileDto } from './dto/create-game-profile.dto';
 import { UpdateGameProfileDto } from './dto/update-game-profile.dto';
+import { GameProfileRepository } from './game-profile.repository';
+import { Types } from 'mongoose';
 
 @Injectable()
 export class GameProfileService {
-  create(createGameProfileDto: CreateGameProfileDto) {
-    return 'This action adds a new gameProfile';
+  constructor(private readonly gameProfileRepository: GameProfileRepository) {}
+
+  async create(userId: string, createGameProfileDto: CreateGameProfileDto) {
+    return this.gameProfileRepository.create({
+      ...createGameProfileDto,
+      userId: new Types.ObjectId(userId),
+    });
   }
 
-  findAll() {
-    return `This action returns all gameProfile`;
+  async findAll(userId: string) {
+    return this.gameProfileRepository.find({
+      userId: new Types.ObjectId(userId),
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} gameProfile`;
+  async findOne(id: string) {
+    const profile = await this.gameProfileRepository.findById(id);
+    if (!profile) {
+      throw new NotFoundException(`Game profile with ID ${id} not found`);
+    }
+    return profile;
   }
 
-  update(id: number, updateGameProfileDto: UpdateGameProfileDto) {
-    return `This action updates a #${id} gameProfile`;
+  async update(id: string, updateGameProfileDto: UpdateGameProfileDto) {
+    const profile = await this.gameProfileRepository.findByIdAndUpdate(
+      id,
+      updateGameProfileDto,
+    );
+    if (!profile) {
+      throw new NotFoundException(`Game profile with ID ${id} not found`);
+    }
+    return profile;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} gameProfile`;
+  async remove(id: string) {
+    const result = await this.gameProfileRepository.updateOne(
+      { _id: new Types.ObjectId(id) },
+      { isActive: false },
+    );
+    if (result.matchedCount === 0) {
+      throw new NotFoundException(`Game profile with ID ${id} not found`);
+    }
+    return { success: true };
   }
 }
