@@ -1,4 +1,5 @@
 import { Transform } from 'class-transformer';
+import type { TransformFnParams } from 'class-transformer';
 import {
   IsEmail,
   IsNotEmpty,
@@ -11,8 +12,8 @@ import {
 export class RegisterDto {
   @IsNotEmpty({ message: 'Email must not be empty' })
   @IsEmail({}, { message: 'Invalid email format' })
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  @Transform(({ value }: TransformFnParams): unknown =>
+    typeof value === 'string' ? value.trim().toLowerCase() : (value as unknown),
   )
   email: string;
 
@@ -26,12 +27,12 @@ export class RegisterDto {
   @IsString()
   @MinLength(4, { message: 'Username must be at least 4 characters long' })
   @MaxLength(20, { message: 'Username must not exceed 20 characters' })
-  @Matches(/^[a-zA-Z0-9_\.]+$/, {
+  @Matches(/^[a-zA-Z0-9_.]+$/, {
     message: 'Username can only contain letters, numbers, dots, or underscores',
   })
   username: string;
 
-  @IsNotEmpty({ message: 'name must not be empty' })
+  @IsNotEmpty({ message: 'Name must not be empty' })
   @IsString()
   @MaxLength(20, { message: 'Name must not exceed 20 characters' })
   name: string;

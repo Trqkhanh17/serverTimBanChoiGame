@@ -5,16 +5,19 @@ import { TripPlan, TripPlanSchema } from './schemas/trip-plan.schema';
 import { TripPlannerController } from './trip-planner.controller';
 import { TripPlannerService } from './trip-planner.service';
 import { GeminiAiService } from './services/gemini-ai.service';
+import { AiUsage, AiUsageSchema } from './schemas/ai-usage.schema';
+import { AiQuotaService } from './services/ai-quota.service';
 
 @Module({
   imports: [
     ConfigModule,
     MongooseModule.forFeature([
       { name: TripPlan.name, schema: TripPlanSchema },
+      { name: AiUsage.name, schema: AiUsageSchema },
     ]),
   ],
   controllers: [TripPlannerController],
-  providers: [TripPlannerService, GeminiAiService],
+  providers: [TripPlannerService, GeminiAiService, AiQuotaService],
   exports: [TripPlannerService, GeminiAiService],
 })
 export class TripPlannerModule {}

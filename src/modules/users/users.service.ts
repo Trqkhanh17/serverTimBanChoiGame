@@ -1,25 +1,17 @@
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import {
-  BadRequestException,
-  HttpException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { Model } from 'mongoose';
-import { User } from 'src/modules/users/schemas/user.schema';
-import { InjectModel } from '@nestjs/mongoose';
-import {
-  changePasswordInPut,
-  checkPasswordInPut,
+  ChangePasswordInput,
+  CheckPasswordInput,
   UserCreateInput,
-  UserDocument,
   UserUpdateInput,
 } from '@/common/types/user.types';
-import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
-import { compareHelper, hashHelper } from '@/common/helpers/ulti';
-
+import {
+  comparePassword,
+  hashPassword,
+} from '@/common/helpers/password.helpers';
+import { UserResponseDto } from './dto/user-response.dto';
 import { UsersRepository } from './users.repository';
+import type { UserDocument } from './schemas/user.schema';
 
 @Injectable()
 export class UsersService {
@@ -27,284 +19,134 @@ export class UsersService {
 
   constructor(private readonly usersRepository: UsersRepository) {}
 
-  async findByEmailForAuth(email: string): Promise<UserDocument | null> {
-    try {
-      const norm = email.trim().toLowerCase();
-      const user = await this.usersRepository.findByEmailWithPassword(norm);
-      return user || null;
-    } catch (error) {
-      this.logger.error(
-        `Database error finding user by email: ${email}`,
-        error.stack,
-      );
-      throw new InternalServerErrorException('Database query failed');
-    }
+  findByEmailForAuth(email: string): Promise<UserDocument | null> {
+    return this.usersRepository.findByEmailWithPassword(
+      this.normalizeEmail(email),
+    );
   }
 
-  async findUserByEmail(email: string): Promise<UserDocument | null> {
-    try {
-      const norm = email.trim().toLowerCase();
-      const user = await this.usersRepository.findOne({ email: norm });
-      return user || null;
-    } catch (error) {
-      this.logger.error(
-        `Database error finding user by email: ${email}`,
-        error.stack,
-      );
-      throw new InternalServerErrorException('Database query failed');
-    }
-  }
-  async isEmailExist(email: string): Promise<boolean> {
-    try {
-      const user = await this.usersRepository.exists({ email });
-      return !!user;
-    } catch (error) {
-      this.logger.error(
-        `Database error checking email existence: ${email}`,
-        error.stack,
-      );
-      throw new InternalServerErrorException('Database query failed');
-    }
+  findUserByEmail(email: string): Promise<UserDocument | null> {
+    return this.usersRepository.findOne({ email: this.normalizeEmail(email) });
   }
 
-  async isUserNameExist(username: string): Promise<boolean> {
-    try {
-      const user = await this.usersRepository.exists({ username });
-      return !!user;
-    } catch (error) {
-      this.logger.error(
-        `Database error checking username existence: ${username}`,
-        error.stack,
-      );
-      throw new InternalServerErrorException('Database query failed');
-    }
+  isEmailExist(email: string): Promise<boolean> {
+    return this.usersRepository.exists({ email: this.normalizeEmail(email) });
   }
 
-  async createUser(dataInput: UserCreateInput): Promise<UserDocument> {
-    try {
-      const { email, passwordHash, username, name } = dataInput;
-
-      const user = await this.usersRepository.create({
-        email,
-        password: passwordHash,
-        username,
-        name,
-      });
-
-      this.logger.log(`User created successfully: ${email}`);
-      return user;
-    } catch (error) {
-      this.logger.error('Database error creating user', error.stack);
-      throw new InternalServerErrorException(
-        'Failed to create user in database',
-      );
-    }
+  isUserNameExist(username: string): Promise<boolean> {
+    return this.usersRepository.exists({ username });
   }
 
-  async getProfileUser(_id: string): Promise<UserResponseDto | null> {
-    try {
-      const user = await this.findUserById(_id);
-      if (!user) return null;
-
-      const result: UserResponseDto = {
-        _id: user._id.toString(),
-        email: user.email,
-        username: user.username,
-        name: user.name,
-        isActive: user.isActive,
-        bio: user.bio,
-        gender: user.gender,
-        birthDate: user.birthDate,
-        avatarUrl: user.avatarUrl,
-      };
-
-      return result;
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      this.logger.error(`Error getting user profile: ${_id}`, error.stack);
-      throw new InternalServerErrorException('Failed to retrieve user profile');
-    }
+  async createUser(input: UserCreateInput): Promise<UserDocument> {
+    const user = await this.usersRepository.create({
+      email: this.normalizeEmail(input.email),
+      password: input.passwordHash,
+      username: input.username,
+      name: input.name,
+    });
+    this.logger.log(`User created successfully: ${user.email}`);
+    return user;
   }
 
-  async findUserById(userId: string): Promise<UserDocument | null> {
-    try {
-      const user = await this.usersRepository.findById(userId);
-      return user || null;
-    } catch (error) {
-      this.logger.error(
-        `Database error finding user by ID: ${userId}`,
-        error.stack,
-      );
-      throw new InternalServerErrorException('Database query failed');
-    }
+  async getProfileUser(userId: string): Promise<UserResponseDto | null> {
+    const user = await this.findUserById(userId);
+    return user ? this.toResponse(user) : null;
+  }
+
+  findUserById(userId: string): Promise<UserDocument | null> {
+    return this.usersRepository.findById(userId);
   }
 
   async updateUserProfile(
     userId: string,
     data: UserUpdateInput,
   ): Promise<UserResponseDto | null> {
-    try {
-      const user = await this.usersRepository.findByIdAndUpdate(userId, {
-        $set: data,
-      });
+    const user = await this.usersRepository.findByIdAndUpdate(userId, {
+      $set: data,
+    });
+    if (!user) return null;
 
-      if (!user) return null;
-
-      const result: UserResponseDto = {
-        _id: user._id.toString(),
-        email: user.email,
-        username: user.username,
-        name: user.name,
-        isActive: user.isActive,
-        bio: user.bio,
-        gender: user.gender,
-        birthDate: user.birthDate,
-        avatarUrl: user.avatarUrl,
-      };
-
-      this.logger.log(`User profile updated: ${userId}`);
-      return result;
-    } catch (error) {
-      this.logger.error(
-        `Database error updating user profile: ${userId}`,
-        error.stack,
-      );
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to update user profile');
-    }
+    this.logger.log(`User profile updated: ${userId}`);
+    return this.toResponse(user);
   }
 
-  async checkPassword(
-    checkPasswordInPut: checkPasswordInPut,
-  ): Promise<boolean> {
-    try {
-      const { password, userId } = checkPasswordInPut;
-      const user = await this.findUserById(userId);
-      if (!user) throw new BadRequestException();
-      const currentPassword = user.password;
-      const isMatch = await compareHelper(password, currentPassword);
-      if (!isMatch) return false;
-      return true;
-    } catch (error) {
-      return false;
-    }
+  async checkPassword(input: CheckPasswordInput): Promise<boolean> {
+    const user = await this.usersRepository.findByIdWithPassword(input.userId);
+    return comparePassword(input.password, user?.password);
   }
-  async changeUserPassword(
-    dataForChangePassword: changePasswordInPut,
-  ): Promise<boolean> {
-    try {
-      const { userId, newPassword } = dataForChangePassword;
 
-      const hashedPass = await hashHelper(newPassword);
+  async changeUserPassword(input: ChangePasswordInput): Promise<boolean> {
+    const password = await hashPassword(input.newPassword);
+    const user = await this.usersRepository.findOneAndUpdate(
+      { _id: input.userId },
+      { $set: { password } },
+    );
+    if (!user) return false;
 
-      const updatedUser = await this.usersRepository.findOneAndUpdate(
-        { _id: userId },
-        { $set: { password: hashedPass } },
-      );
-
-      if (!updatedUser) return false;
-
-      this.logger.log(`Password change successfully: ${userId}`);
-      return true;
-    } catch (error) {
-      this.logger.error(
-        `Database error change password: ${dataForChangePassword.userId}`,
-        error.stack,
-      );
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to reset password');
-    }
+    this.logger.log(`Password changed successfully: ${input.userId}`);
+    return true;
   }
 
   async addRefreshTokenToDB(token: string, userId: string): Promise<boolean> {
-    try {
-      const HashRefreshToken = await hashHelper(token);
-      const user = await this.usersRepository.findOneAndUpdate(
-        { _id: userId },
-        { $set: { refreshToken: HashRefreshToken } },
-      );
-
-      return !!user;
-    } catch (error) {
-      this.logger.error(
-        `Database error adding refresh token: ${userId}`,
-        error.stack,
-      );
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to save refresh token');
-    }
+    const refreshToken = await hashPassword(token);
+    const user = await this.usersRepository.findOneAndUpdate(
+      { _id: userId },
+      { $set: { refreshToken } },
+    );
+    return Boolean(user);
   }
 
-  async getRefreshToken(_id: string): Promise<string | null> {
-    try {
-      const user = await this.usersRepository.findOne(
-        { _id, refreshToken: { $exists: true, $ne: null } },
-        'refreshToken',
-      );
-      return user?.refreshToken ? user.refreshToken : null;
-    } catch (error) {
-      this.logger.error(
-        `Database error checking refresh token: ${_id}`,
-        error.stack,
-      );
-      throw new InternalServerErrorException('Database query failed');
-    }
+  async getRefreshToken(userId: string): Promise<string | null> {
+    const user = await this.usersRepository.findOne(
+      { _id: userId, refreshToken: { $exists: true, $ne: null } },
+      'refreshToken',
+    );
+    return user?.refreshToken ?? null;
   }
 
-  async getRefreshTokenVersion(_id: string): Promise<number | null> {
-    try {
-      const user = await this.usersRepository.findOne(
-        { _id },
-        { refreshTokenVersion: 1, _id: 0 },
-      );
-      return user?.refreshTokenVersion ?? null;
-    } catch (error) {
-      this.logger.error(
-        `Database error get RefreshTokenVersion: ${_id}`,
-        error.stack,
-      );
-      throw new InternalServerErrorException('Database query failed');
-    }
+  async getRefreshTokenVersion(userId: string): Promise<number | null> {
+    const user = await this.usersRepository.findOne(
+      { _id: userId },
+      { refreshTokenVersion: 1, _id: 0 },
+    );
+    return user?.refreshTokenVersion ?? null;
   }
 
   async banUser(email: string): Promise<boolean> {
-    try {
-      const result = await this.usersRepository.findOneAndUpdate(
-        { email },
-        { $set: { isBanned: true } },
-      );
+    const user = await this.usersRepository.findOneAndUpdate(
+      { email: this.normalizeEmail(email) },
+      { $set: { isBanned: true } },
+    );
+    if (!user) return false;
 
-      if (!result) return false;
-
-      this.logger.log(`User banned: ${email}`);
-      return true;
-    } catch (error) {
-      this.logger.error(`Database error banning user: ${email}`, error.stack);
-      throw new InternalServerErrorException('Failed to ban user');
-    }
+    this.logger.log(`User banned: ${email}`);
+    return true;
   }
 
-  async removeRefreshToken(_id: string): Promise<boolean> {
-    try {
-      const checkRefreshToken = await this.getRefreshToken(_id);
-      if (!checkRefreshToken) throw new UnauthorizedException();
-      const result = await this.usersRepository.updateOne(
-        { _id },
-        { $unset: { refreshToken: '' } },
-      );
-
-      this.logger.log(`Refresh token removed for user: ${_id}`);
-      return result.modifiedCount > 0;
-    } catch (error) {
-      this.logger.error(
-        `Database error removing refresh token: ${_id}`,
-        error.stack,
-      );
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to remove refresh token');
+  async removeRefreshToken(userId: string): Promise<boolean> {
+    const result = await this.usersRepository.updateOne(
+      { _id: userId, refreshToken: { $exists: true, $ne: null } },
+      {
+        $unset: { refreshToken: '' },
+        $inc: { refreshTokenVersion: 1 },
+      },
+    );
+    if (result.modifiedCount === 0) {
+      throw new UnauthorizedException('Refresh token not found');
     }
+
+    this.logger.log(`Refresh token removed for user: ${userId}`);
+    return true;
+  }
+
+  async revokeAllRefreshTokens(userId: string): Promise<void> {
+    await this.usersRepository.updateOne(
+      { _id: userId },
+      {
+        $unset: { refreshToken: '' },
+        $inc: { refreshTokenVersion: 1 },
+      },
+    );
   }
 
   async getUserStats(): Promise<{
@@ -312,49 +154,59 @@ export class UsersService {
     activeUsers: number;
     bannedUsers: number;
   }> {
-    try {
-      const [totalUsers, activeUsers, bannedUsers] = await Promise.all([
-        this.usersRepository.countDocuments(),
-        this.usersRepository.countDocuments({ isActive: true }),
-        this.usersRepository.countDocuments({ isBanned: true }),
-      ]);
-
-      return { totalUsers, activeUsers, bannedUsers };
-    } catch (error) {
-      this.logger.error('Database error getting user stats', error.stack);
-      throw new InternalServerErrorException('Failed to get user statistics');
-    }
+    const [totalUsers, activeUsers, bannedUsers] = await Promise.all([
+      this.usersRepository.countDocuments(),
+      this.usersRepository.countDocuments({ isActive: true }),
+      this.usersRepository.countDocuments({ isBanned: true }),
+    ]);
+    return { totalUsers, activeUsers, bannedUsers };
   }
 
-  async findUsersById(userIds: string[]): Promise<UserDocument[]> {
-    try {
-      const users = await this.usersRepository.find({ _id: { $in: userIds } });
-      return users;
-    } catch (error) {
-      this.logger.error('Database error finding users by IDs', error.stack);
-      throw new InternalServerErrorException('Database query failed');
-    }
+  findUsersById(userIds: string[]): Promise<UserDocument[]> {
+    return this.usersRepository.find({ _id: { $in: userIds } });
   }
+
   async setVerifyJti(userId: string, jti: string): Promise<boolean> {
-    const jtiHash = await hashHelper(jti);
-    const user = await this.usersRepository.updateOne(
+    const verifyJti = await hashPassword(jti);
+    const result = await this.usersRepository.updateOne(
       { _id: userId },
-      { $set: { verifyJti: jtiHash } },
+      { $set: { verifyJti } },
     );
-    if (!user) return false;
-    return true;
+    return result.matchedCount > 0;
   }
+
   async consumeVerifyJti(userId: string, jti: string): Promise<boolean> {
     const user = await this.findUserById(userId);
-    if (!user || !user.verifyJti) return false;
-    const isValid = await compareHelper(jti, user.verifyJti);
-    if (!isValid) return false;
-    const res = await this.usersRepository.updateOne(
-      { _id: userId, isActive: false },
+    if (!user?.verifyJti || !(await comparePassword(jti, user.verifyJti))) {
+      return false;
+    }
+
+    const result = await this.usersRepository.updateOne(
+      { _id: userId, isActive: false, verifyJti: user.verifyJti },
       {
         $set: { isActive: true, emailVerifiedAt: new Date(), verifyJti: null },
       },
     );
-    return res.modifiedCount > 0;
+    return result.modifiedCount > 0;
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
+
+  private toResponse(user: UserDocument): UserResponseDto {
+    return {
+      _id: user._id.toString(),
+      email: user.email,
+      username: user.username,
+      name: user.name,
+      isActive: user.isActive,
+      isBanned: user.isBanned,
+      role: user.role,
+      bio: user.bio,
+      gender: user.gender,
+      birthDate: user.birthDate,
+      avatarUrl: user.avatarUrl,
+    };
   }
 }

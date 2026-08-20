@@ -21,6 +21,8 @@ export class AppController {
             <li>POST /auth/forgot-password</li>
             <li>PATCH /auth/change-password</li>
             <li>PATCH /auth/change-password-forgot</li>
+            <li>POST /auth/forgot-password-verify</li>
+            <li>POST /auth/resend-verification</li>
             <li>DELETE /auth/logout</li>
             <li>GET /auth/verify-email</li>
           </ul>
@@ -29,12 +31,21 @@ export class AppController {
           <ul>
             <li>POST /trip-planner/generate (Tạo kế hoạch du lịch AI)</li>
             <li>GET /trip-planner/my-trips (Lịch sử chuyến đi của user)</li>
+            <li>GET /trip-planner/public (Lịch trình công khai)</li>
+            <li>GET /trip-planner/quota (Quota tạo lịch trình)</li>
             <li>GET /trip-planner/:id (Chi tiết kế hoạch)</li>
+            <li>POST /trip-planner/:id/claim (Lưu kế hoạch guest vào tài khoản)</li>
             <li>PATCH /trip-planner/:id/share (Bật/tắt chia sẻ cho bạn bè)</li>
             <li>DELETE /trip-planner/:id (Xóa kế hoạch)</li>
           </ul>
         </li>
+        <li><strong>System</strong>: GET /health, GET /docs</li>
       </ul>
     `;
+  }
+
+  @Get('health')
+  getHealth() {
+    return this.appService.getHealth();
   }
 }

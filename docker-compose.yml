@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 1. SERVICE: DATABASE (MongoDB)
   mongo:
@@ -20,7 +18,9 @@ services:
 
   # 2. SERVICE: APP (NestJS)
   api:
-    build: . # Build từ Dockerfile ở thư mục hiện tại
+    build:
+      context: .
+      target: builder # Dev cần Nest CLI và các devDependencies
     container_name: my-server
     ports:
       - '8080:8080' # Map cổng ra ngoài
