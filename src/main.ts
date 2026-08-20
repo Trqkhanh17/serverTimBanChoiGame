@@ -1,46 +1,33 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { API_PREFIX } from './common/constants/api.constants';
+import { configureApplication } from './config/application.setup';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
-  const port = configService.get('PORT');
-  // Enable CORS for requests from frontend
-  // Prefer an explicit FRONTEND_URL env variable; fall back to BACKEND_BASE_URL or allow all
-  const frontendOrigin =
-    configService.get<string>('FRONTEND_URL') ||
-    configService.get<string>('BACKEND_BASE_URL') ||
-    '*';
-  app.enableCors({
-    origin: frontendOrigin === '*' ? true : frontendOrigin,
-    credentials: true,
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Accept',
-      'Origin',
-      'X-Requested-With',
-    ],
+  const port = Number(configService.get<string>('PORT') ?? 8080);
+  configureApplication(app);
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('AI Travel Planner API')
+    .setDescription('Authentication, profile and AI trip planning APIs')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .addApiKey({ type: 'apiKey', in: 'header', name: 'X-Guest-Token' }, 'guest')
+    .build();
+  const openApiDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup(`${API_PREFIX}/docs`, app, openApiDocument, {
+    jsonDocumentUrl: `${API_PREFIX}/docs/openapi.json`,
   });
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-  // Simple Logging Middleware
-  app.use((req, res, next) => {
-    console.log(
-      `[Request] ${new Date().toLocaleString('vi-VN')} ${req.method} ${req.url}`,
-    );
-    next();
-  });
-  app.setGlobalPrefix(API_PREFIX);
+
+  const logger = new Logger('HTTP');
   await app.listen(port);
+  logger.log(`Server is running on port ${port}`);
+  logger.log(`OpenAPI documentation: /${API_PREFIX}/docs`);
 }
-bootstrap();
+void bootstrap();

@@ -16,19 +16,28 @@ import { LocalAuthGuard } from '@/auth/passport/guards/local-auth.guard';
 import { JwtAccessGuard } from '@/auth/passport/guards/jwt-access.guard';
 import { JwtRefreshGuard } from '@/auth/passport/guards/jwt-refresh.guard';
 import { UpdateUserDto } from '@/auth/dto/update-user.dto';
-import { RegisterDto } from '@/auth/dto/register.Dto';
-import { EmailValidateDto } from '@/auth/dto/forgot-password.dto';
+import { RegisterDto } from '@/auth/dto/register-user.dto';
+import {
+  EmailValidateDto,
+  VerifyForgotPasswordOtpDto,
+} from '@/auth/dto/forgot-password.dto';
 import { ChangePasswordDto } from '@/auth/dto/change-password.dto';
 import type {
-  InputChangePasswordAuth,
+  ChangeOwnPasswordInput,
   RequestWithUser,
   RequestWithUserAndRefreshToken,
 } from '@/common/types/auth.types';
-import { ChangePasswordForget } from '@/auth/dto/change.password.forgot.dto';
+import { ResetPasswordDto } from '@/auth/dto/reset-password.dto';
 import { minutes, Throttle } from '@nestjs/throttler';
+import { EmailVerificationService } from './services/email-verification.service';
+import { PasswordResetService } from './services/password-reset.service';
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly emailVerificationService: EmailVerificationService,
+    private readonly passwordResetService: PasswordResetService,
+  ) {}
 
   @UseGuards(LocalAuthGuard)
   @Throttle({
@@ -37,7 +46,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(200)
   async login(@Request() req: RequestWithUser) {
-    return await this.authService.login(req.user);
+    return this.authService.login(req.user);
   }
 
   @Throttle({
@@ -46,7 +55,7 @@ export class AuthController {
   @Post('register')
   @HttpCode(201)
   async register(@Body() data: RegisterDto) {
-    return await this.authService.register(data);
+    return this.authService.register(data);
   }
 
   @UseGuards(JwtAccessGuard)
@@ -54,7 +63,7 @@ export class AuthController {
   @HttpCode(200)
   async getProfileUser(@Request() req: RequestWithUser) {
     const user = req.user;
-    return await this.authService.getProfileUser(user);
+    return this.authService.getProfileUser(user);
   }
 
   @UseGuards(JwtRefreshGuard)
@@ -62,14 +71,7 @@ export class AuthController {
   @HttpCode(200)
   async refresh(@Request() req: RequestWithUserAndRefreshToken) {
     const { user, refreshToken } = req;
-    const access_token = await this.authService.generateAccessToken(
-      user,
-      refreshToken,
-      user.tokenVersion,
-    );
-    return {
-      access_token,
-    };
+    return this.authService.refresh(user, refreshToken);
   }
 
   @UseGuards(JwtAccessGuard)
@@ -93,7 +95,10 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(202)
   async forgotPassword(@Body() input: EmailValidateDto) {
-    await this.authService.sendUserForgotPassword(input.email.toString());
+    await this.passwordResetService.request(input.email);
+    return {
+      message: 'Nếu email tồn tại, mã OTP đã được gửi.',
+    };
   }
 
   @UseGuards(JwtAccessGuard)
@@ -106,31 +111,49 @@ export class AuthController {
     @Body() data: ChangePasswordDto,
   ) {
     const userId = req.user._id;
-    const inPutChangePassword: InputChangePasswordAuth = {
-      comFirmPassword: data.comFirmPassword,
+    const changePasswordInput: ChangeOwnPasswordInput = {
+      confirmPassword: data.confirmPassword,
       newPassword: data.newPassword,
       oldPassword: data.oldPassword,
       userId: userId,
     };
-    return await this.authService.changePassword(inPutChangePassword);
+    return this.authService.changePassword(changePasswordInput);
   }
 
   @Patch('change-password-forgot')
-  async changePasswordForgot(@Body() body: ChangePasswordForget) {
-    return this.authService.changePasswordForgot();
+  @Throttle({
+    default: { limit: 5, ttl: minutes(15), blockDuration: minutes(15) },
+  })
+  async changePasswordForgot(@Body() body: ResetPasswordDto) {
+    return this.passwordResetService.reset(body);
   }
 
   @UseGuards(JwtRefreshGuard)
   @Delete('logout')
   async logOut(@Request() req: RequestWithUser) {
-    return await this.authService.logout(req.user._id);
+    return this.authService.logout(req.user._id);
   }
 
   @Get('verify-email')
   async verifyEmail(@Query('token') token: string) {
-    const result = await this.authService.verifyEmailToken(token);
-    return result;
+    return this.emailVerificationService.verify(token);
   }
   @Post('forgot-password-verify')
-  async verifyOtpForgot() {}
+  @HttpCode(200)
+  @Throttle({
+    default: { limit: 5, ttl: minutes(15), blockDuration: minutes(15) },
+  })
+  async verifyOtpForgot(@Body() body: VerifyForgotPasswordOtpDto) {
+    return this.passwordResetService.verifyOtp(body.email, body.otpCode);
+  }
+
+  @Post('resend-verification')
+  @HttpCode(202)
+  @Throttle({
+    default: { limit: 3, ttl: minutes(15), blockDuration: minutes(15) },
+  })
+  async resendVerification(@Body() body: EmailValidateDto) {
+    await this.emailVerificationService.resend(body.email);
+    return { message: 'Nếu tài khoản chưa xác minh, email mới đã được gửi.' };
+  }
 }

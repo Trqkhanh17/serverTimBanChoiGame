@@ -6,62 +6,58 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { TripPlannerService } from './trip-planner.service';
 import { CreateTripPlanDto } from './dto/create-trip-plan.dto';
 import { JwtAccessGuard } from '@/auth/passport/guards/jwt-access.guard';
-import type { RequestWithUser } from '@/common/types/auth.types';
-import { ConfigService } from '@nestjs/config';
-import * as jwt from 'jsonwebtoken';
-import type { Request } from 'express';
+import type {
+  OptionalRequestWithUser,
+  RequestWithUser,
+} from '@/common/types/auth.types';
+import { TripPlanQueryDto } from './dto/trip-plan-query.dto';
+import { OptionalJwtAccessGuard } from '@/auth/passport/guards/optional-jwt-access.guard';
+import { minutes, Throttle } from '@nestjs/throttler';
 
 @Controller('trip-planner')
 export class TripPlannerController {
-  constructor(
-    private readonly tripPlannerService: TripPlannerService,
-    private readonly configService: ConfigService,
-  ) {}
-
-  /**
-   * Helper method to extract optional user ID from Authorization header
-   */
-  private extractUserIdFromHeader(req: Request): string | undefined {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return undefined;
-    }
-    const token = authHeader.split(' ')[1];
-    const jwtSecret = this.configService.get<string>('JWT_ACCESS_SECRET');
-    if (!jwtSecret) return undefined;
-
-    try {
-      const decoded = jwt.verify(token, jwtSecret) as { sub?: string };
-      return decoded.sub;
-    } catch {
-      return undefined;
-    }
-  }
+  constructor(private readonly tripPlannerService: TripPlannerService) {}
 
   /**
    * Sinh kế hoạch du lịch bằng AI và lưu vào Database
    * Có thể gọi bởi khách vãng lai hoặc user đã đăng nhập
    */
   @Post('generate')
+  @UseGuards(OptionalJwtAccessGuard)
+  @Throttle({
+    default: { limit: 5, ttl: minutes(1), blockDuration: minutes(5) },
+  })
   async generateTripPlan(
     @Body() createTripPlanDto: CreateTripPlanDto,
-    @Req() req: Request,
+    @Req() req: OptionalRequestWithUser,
   ) {
-    const userId = this.extractUserIdFromHeader(req);
+    const userId = req.user?._id;
     const plan = await this.tripPlannerService.generatePlan(
       createTripPlanDto,
       userId,
+      req.ip,
     );
     return {
       message: 'Tạo kế hoạch du lịch thành công!',
-      data: plan,
+      data: plan.plan,
+      guest_manage_token: plan.guestManageToken,
     };
+  }
+
+  @Get('quota')
+  @UseGuards(OptionalJwtAccessGuard)
+  getQuota(@Req() req: OptionalRequestWithUser) {
+    return this.tripPlannerService.getQuotaStatus(
+      req.user?._id,
+      req.ip ?? 'unknown',
+    );
   }
 
   /**
@@ -69,25 +65,53 @@ export class TripPlannerController {
    */
   @UseGuards(JwtAccessGuard)
   @Get('my-trips')
-  async getMyTrips(@Req() req: RequestWithUser) {
+  async getMyTrips(
+    @Req() req: RequestWithUser,
+    @Query() query: TripPlanQueryDto,
+  ) {
     const userId = req.user._id;
-    const trips = await this.tripPlannerService.getUserPlans(userId);
-    return {
-      total: trips.length,
-      data: trips,
-    };
+    return this.tripPlannerService.getUserPlans(
+      userId,
+      query.page,
+      query.limit,
+    );
+  }
+
+  /** Danh sách lịch trình được chia sẻ công khai */
+  @Get('public')
+  async getPublicTrips(@Query() query: TripPlanQueryDto) {
+    return this.tripPlannerService.getPublicPlans(query.page, query.limit);
   }
 
   /**
    * Xem chi tiết kế hoạch du lịch theo ID
    */
   @Get(':id')
-  async getTripPlanById(@Param('id') id: string, @Req() req: Request) {
-    const userId = this.extractUserIdFromHeader(req);
-    const plan = await this.tripPlannerService.getPlanById(id, userId);
+  @UseGuards(OptionalJwtAccessGuard)
+  async getTripPlanById(
+    @Param('id') id: string,
+    @Req() req: OptionalRequestWithUser,
+  ) {
+    const userId = req.user?._id;
+    const plan = await this.tripPlannerService.getPlanById(
+      id,
+      userId,
+      req.header('x-guest-token'),
+    );
     return {
       data: plan,
     };
+  }
+
+  @UseGuards(JwtAccessGuard)
+  @Post(':id/claim')
+  async claimGuestTrip(@Param('id') id: string, @Req() req: RequestWithUser) {
+    const plan = await this.tripPlannerService.claimGuestPlan(
+      id,
+      req.user._id,
+      req.header('x-guest-token'),
+    );
+    return { message: 'Đã lưu kế hoạch vào tài khoản.', data: plan };
   }
 
   /**
@@ -110,10 +134,16 @@ export class TripPlannerController {
   /**
    * Xóa kế hoạch du lịch
    */
-  @UseGuards(JwtAccessGuard)
+  @UseGuards(OptionalJwtAccessGuard)
   @Delete(':id')
-  async deleteTripPlan(@Param('id') id: string, @Req() req: RequestWithUser) {
-    const userId = req.user._id;
-    return this.tripPlannerService.deletePlan(id, userId);
+  async deleteTripPlan(
+    @Param('id') id: string,
+    @Req() req: OptionalRequestWithUser,
+  ) {
+    return this.tripPlannerService.deletePlan(
+      id,
+      req.user?._id,
+      req.header('x-guest-token'),
+    );
   }
 }
