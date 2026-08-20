@@ -9,23 +9,25 @@ src/
 │   ├── passport/         # Passport strategies (JWT, Local) and Guards
 │   ├── auth.controller.ts
 │   ├── auth.module.ts
-│   └── auth.service.ts
+│   ├── auth.service.ts
+│   └── services/         # Token, email verification, password reset
 │
 ├── common/               # Shared Resources & Utilities
 │   ├── constants/        # System constants (e.g. API_PREFIX)
 │   ├── helpers/          # Utility functions (hash, compare, etc.)
-│   ├── repositories/     # Generic abstract repository
+│   ├── repositories/     # Typed BaseRepository for MongoDB
 │   └── types/            # TypeScript type definitions
 │
-├── mail/                 # Email Delivery Module (Nodemailer + Handlebars)
-│   ├── templates/        # Email templates
+├── config/               # Environment validation and shared app bootstrap
+│
+├── mail/                 # Email Delivery Module (SMTP hoặc Resend API)
 │   └── mail.service.ts
 │
 ├── modules/              # Core Feature Modules
 │   ├── trip-planner/     # 🚀 AI Travel & Outing Planner Module
 │   │   ├── dto/          # CreateTripPlanDto, GeneratedTripPlanResult
-│   │   ├── schemas/      # TripPlan MongoDB Schema
-│   │   ├── services/     # GeminiAiService, TripPlannerService
+│   │   ├── schemas/      # TripPlan, AI quota and runtime response validation
+│   │   ├── services/     # Gemini, prompt builder and daily quota
 │   │   ├── trip-planner.controller.ts
 │   │   └── trip-planner.module.ts
 │   ├── users/            # User Management & Profiles
@@ -41,3 +43,10 @@ src/
 - **Modular Architecture:** Hệ thống được chia tách thành các module độc lập theo tính năng (`auth`, `users`, `trip-planner`).
 - **AI Integration (Google Gemini SDK):** Tích hợp Google GenAI SDK với cơ chế **JSON Schema Structured Output** giúp AI phản hồi dữ liệu cấu trúc chặt chẽ, không bị lỗi cú pháp.
 - **Data Persistence:** Sử dụng MongoDB và Mongoose để lưu trữ thông tin người dùng và các kế hoạch du lịch phức tạp dạng JSON lồng nhau (nested document).
+- **MVP Hardening:** Guest plan có token/TTL, quota AI theo ngày, external timeout, request ID, security headers và Swagger/OpenAPI.
+
+## Related Documents
+
+- [Product Requirements Document](./PRD.md)
+- [Software Requirements Specification](./SRS.md)
+- [API Documentation](./API.md)

@@ -1,6 +1,8 @@
-import type { OtpPurpose } from '@/common/types/opt.types';
+import type { OtpPurpose } from '@/common/types/otp.types';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import type { HydratedDocument } from 'mongoose';
+
+export type OtpDocument = HydratedDocument<Otp>;
 
 @Schema({ timestamps: true })
 export class Otp {
@@ -21,3 +23,5 @@ export class Otp {
 }
 
 export const OtpSchema = SchemaFactory.createForClass(Otp);
+OtpSchema.index({ otpExpiresAt: 1 }, { expireAfterSeconds: 0 });
+OtpSchema.index({ userId: 1, purpose: 1, createdAt: -1 });

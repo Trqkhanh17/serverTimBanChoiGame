@@ -1,5 +1,5 @@
 # 1. BUILD STAGE: Install dependencies and compile TypeScript
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -10,7 +10,7 @@ COPY . .
 RUN npm run build
 
 # 2. RUN STAGE: Keep only production dependencies and run the app
-FROM node:20-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 COPY package*.json ./

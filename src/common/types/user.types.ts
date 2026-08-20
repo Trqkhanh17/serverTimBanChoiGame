@@ -1,16 +1,3 @@
-import { User } from '@/modules/users/schemas/user.schema';
-import { Document } from 'mongoose';
-
-export type UserResponse = Omit<
-  User,
-  | 'password'
-  | 'otpCode'
-  | 'otpExpiresAt'
-  | 'resetPasswordToken'
-  | 'resetPasswordExpires'
->;
-
-export type UserDocument = User & Document & { _id: string };
 export interface UserCreateInput {
   email: string;
   passwordHash: string;
@@ -27,11 +14,11 @@ export interface UserUpdateInput {
   birthDate?: string;
 }
 
-export interface changePasswordInPut {
+export interface ChangePasswordInput {
   userId: string;
   newPassword: string;
 }
-export interface checkPasswordInPut {
+export interface CheckPasswordInput {
   userId: string;
   password: string;
 }

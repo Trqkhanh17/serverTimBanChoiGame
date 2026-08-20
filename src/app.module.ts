@@ -9,21 +9,25 @@ import { OtpModule } from './modules/otp/otp.module';
 import { TripPlannerModule } from './modules/trip-planner/trip-planner.module';
 import { minutes, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { validateEnvironment } from './config/environment.validation';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: validateEnvironment,
     }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => [
+      useFactory: (configService: ConfigService) => [
         {
           name: 'default',
           ttl: minutes(
-            Number(configService.get<string>('RATE_LIMIT_DEFAULT_TTL')),
+            Number(configService.get<string>('RATE_LIMIT_DEFAULT_TTL') ?? 1),
           ),
-          limit: Number(configService.get<string>('RATE_LIMIT_DEFAULT_TTL')),
+          limit: Number(
+            configService.get<string>('RATE_LIMIT_DEFAULT_LIMIT') ?? 60,
+          ),
         },
       ],
     }),
@@ -31,9 +35,11 @@ import { APP_GUARD } from '@nestjs/core';
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI'),
-      }),
+      useFactory: (configService: ConfigService) => {
+        const uri = configService.get<string>('MONGODB_URI');
+        if (!uri) throw new Error('MONGODB_URI is required');
+        return { uri };
+      },
     }),
     UsersModule,
     AuthModule,

@@ -14,10 +14,8 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
-        "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+    "paths": {
+      "@/*": ["./src/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

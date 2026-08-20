@@ -1,4 +1,6 @@
 import { UserResponseDto } from '@/modules/users/dto/user-response.dto';
+import { Role } from '@/common/types/user.types';
+import type { Request } from 'express';
 
 export interface AuthUser {
   _id: string;
@@ -7,12 +9,13 @@ export interface AuthUser {
   username: string;
   isActive: boolean;
   isBanned: boolean;
+  role: Role;
 }
 
-export interface InputChangePasswordAuth {
+export interface ChangeOwnPasswordInput {
   newPassword: string;
   oldPassword: string;
-  comFirmPassword: string;
+  confirmPassword: string;
   userId: string;
 }
 
@@ -22,4 +25,7 @@ export interface RequestWithUser extends Request {
 export interface RequestWithUserAndRefreshToken extends Request {
   user: UserResponseDto;
   refreshToken: string;
+}
+export interface OptionalRequestWithUser extends Request {
+  user?: UserResponseDto;
 }
