@@ -2,346 +2,227 @@
 
 ## AI Travel & Outing Planner
 
-| Thuộc tính    | Giá trị                                                |
-| ------------- | ------------------------------------------------------ |
-| Phiên bản     | 1.0                                                    |
-| Trạng thái    | Baseline theo sản phẩm đã triển khai                   |
-| Ngày cập nhật | 20/08/2026                                             |
-| Phạm vi       | Backend API `ai-travel-planner-server`                 |
-| Đối tượng đọc | Product Owner, Business Analyst, Developer, QA, DevOps |
-
-## 1. Tóm tắt sản phẩm
-
-AI Travel & Outing Planner là dịch vụ backend giúp người dùng tạo kế hoạch du lịch dựa trên ngân sách, số người, thời gian, điểm xuất phát, điểm đến mong muốn và phong cách trải nghiệm. Hệ thống sử dụng Google Gemini để tạo kết quả có cấu trúc, sau đó lưu kế hoạch vào MongoDB để người dùng xem lại, chia sẻ hoặc xóa.
-
-Sản phẩm hỗ trợ hai cách sử dụng:
-
-- Khách vãng lai có thể tạo kế hoạch không cần tài khoản. Kế hoạch mặc định riêng tư, có thời hạn và được quản lý bằng guest token chỉ trả một lần.
-- Người dùng đã đăng nhập có thể tạo kế hoạch riêng tư, quản lý lịch sử và chủ động bật hoặc tắt chia sẻ công khai.
-
-Ngoài chức năng lập kế hoạch, hệ thống cung cấp đầy đủ vòng đời tài khoản gồm đăng ký, xác minh email, đăng nhập, làm mới token, cập nhật hồ sơ, đổi mật khẩu, quên mật khẩu và đăng xuất.
-
-## 2. Bối cảnh và vấn đề cần giải quyết
-
-Người đi du lịch thường phải tự tổng hợp thông tin từ nhiều nguồn để trả lời các câu hỏi:
-
-- Với ngân sách hiện có thì nên đi đâu?
-- Chi phí di chuyển, lưu trú, ăn uống và vui chơi nên phân bổ thế nào?
-- Lịch trình sáng, chiều, tối ra sao để thuận tiện về địa lý?
-- Nên ăn gì, đi đâu và cần lưu ý điều gì?
-- Làm cách nào để lưu hoặc chia sẻ kế hoạch cho người khác?
-
-Quá trình này tốn thời gian, khó cân đối ngân sách và dễ tạo lịch trình thiếu thực tế. Sản phẩm giải quyết vấn đề bằng cách chuẩn hóa đầu vào, sử dụng AI để tổng hợp kế hoạch và trả về một cấu trúc nhất quán cho frontend.
-
-## 3. Tầm nhìn sản phẩm
-
-Trở thành nền tảng lập kế hoạch du lịch nhanh, dễ sử dụng và có chi phí vận hành thấp, giúp người dùng chuyển từ nhu cầu ban đầu sang một lịch trình có thể thực hiện trong vài phút.
-
-## 4. Mục tiêu sản phẩm
-
-### 4.1. Mục tiêu chính
-
-- Tạo được kế hoạch du lịch đầy đủ từ một bộ tiêu chí ngắn gọn.
-- Không để tổng chi phí AI đề xuất vượt ngân sách người dùng cung cấp.
-- Cho phép sử dụng ngay cả khi chưa đăng ký tài khoản.
-- Cho phép người dùng đã đăng nhập lưu, xem, chia sẻ và xóa kế hoạch của mình.
-- Bảo vệ tài khoản bằng xác minh email, JWT, token revocation, OTP một lần và rate limiting.
-- Duy trì chi phí thấp thông qua MongoDB, Gemini Flash-Lite và khả năng triển khai bằng Docker.
-
-### 4.2. Chỉ số thành công đề xuất
-
-Các chỉ số dưới đây là mục tiêu đo lường sản phẩm; hệ thống hiện chưa có module analytics riêng.
-
-| Mã     | Chỉ số                                    | Mục tiêu ban đầu                                  |
-| ------ | ----------------------------------------- | ------------------------------------------------- |
-| KPI-01 | Tỷ lệ yêu cầu tạo kế hoạch thành công     | ≥ 95% khi Gemini và MongoDB hoạt động bình thường |
-| KPI-02 | Tỷ lệ kế hoạch không vượt ngân sách       | 100% sau bước kiểm tra backend                    |
-| KPI-03 | Tỷ lệ kết quả có đúng số ngày yêu cầu     | 100% sau bước kiểm tra backend                    |
-| KPI-04 | Thời gian phản hồi tạo kế hoạch P95       | ≤ 30 giây, phụ thuộc Gemini                       |
-| KPI-05 | Tỷ lệ API không liên quan AI phản hồi P95 | ≤ 1 giây trong điều kiện tải bình thường          |
-| KPI-06 | Tỷ lệ test bắt buộc qua CI                | 100% trước khi hợp nhất PR                        |
-| KPI-07 | Lỗ hổng dependency mức cao/nghiêm trọng   | 0 tại thời điểm phát hành                         |
-
-## 5. Đối tượng sử dụng
-
-### 5.1. Khách vãng lai
-
-Người muốn thử nhanh chức năng lập kế hoạch mà không tạo tài khoản.
-
-Nhu cầu chính:
-
-- Nhập tiêu chí và nhận lịch trình.
-- Xem các kế hoạch công khai.
-- Mở lại hoặc xóa kế hoạch bằng ID và guest token.
-
-Giới hạn:
-
-- Không có danh sách lịch sử cá nhân.
-- Không thể bật chia sẻ công khai trước khi nhận kế hoạch vào tài khoản.
-- Có thể claim kế hoạch vào tài khoản; kế hoạch chưa claim tự hết hạn theo cấu hình.
-
-### 5.2. Người dùng đã đăng ký
-
-Người muốn quản lý kế hoạch lâu dài và kiểm soát quyền riêng tư.
-
-Nhu cầu chính:
-
-- Xác minh email và đăng nhập an toàn.
-- Tạo kế hoạch riêng tư gắn với tài khoản.
-- Xem lịch sử cá nhân theo phân trang.
-- Chia sẻ hoặc thu hồi chia sẻ kế hoạch.
-- Xóa kế hoạch của chính mình.
-- Cập nhật hồ sơ và quản lý mật khẩu.
-
-### 5.3. Quản trị viên vận hành
-
-Vai trò `admin` đã tồn tại trong mô hình dữ liệu nhưng phiên bản hiện tại chưa cung cấp API quản trị. Quản trị viên vận hành hệ thống thông qua hạ tầng, log, MongoDB và cấu hình môi trường.
-
-## 6. Phạm vi sản phẩm
-
-### 6.1. Trong phạm vi phiên bản hiện tại
-
-- Đăng ký tài khoản local bằng email và mật khẩu.
-- Xác minh email bằng liên kết JWT dùng một lần.
-- Gửi lại email xác minh theo cơ chế không làm lộ trạng thái tài khoản.
-- Đăng nhập và cấp access token, refresh token.
-- Làm mới access token.
-- Thu hồi token khi đổi mật khẩu hoặc đăng xuất.
-- Xem và cập nhật hồ sơ.
-- Quên mật khẩu bằng OTP sáu chữ số và reset token dùng một lần.
-- Tạo kế hoạch bằng Gemini với structured output.
-- Kiểm tra số ngày và ngân sách trước khi lưu.
-- Lưu kế hoạch của khách hoặc người dùng vào MongoDB.
-- Danh sách kế hoạch cá nhân và công khai có phân trang.
-- Kiểm soát quyền xem kế hoạch riêng tư.
-- Bật hoặc tắt chia sẻ kế hoạch.
-- Xóa kế hoạch thuộc sở hữu của người dùng.
-- Health check cho API, MongoDB và trạng thái cấu hình Gemini.
-- Rate limiting, validation DTO, CORS và logging HTTP.
-- Unit test, E2E API test, CI và Docker build workflow.
-
-### 6.2. Ngoài phạm vi hiện tại
-
-- Frontend web hoặc mobile.
-- Đặt vé máy bay, khách sạn, nhà hàng hoặc thanh toán.
-- Đồng bộ giá theo thời gian thực từ nhà cung cấp du lịch.
-- Bản đồ, định tuyến GPS hoặc tính khoảng cách thực tế.
-- Đăng nhập Google, Facebook, Apple hoặc OAuth khác.
-- Cộng tác chỉnh sửa kế hoạch theo thời gian thực.
-- Bình luận, đánh giá, yêu thích hoặc theo dõi người dùng.
-- Thông báo đẩy, SMS và lịch nhắc chuyến đi.
-- API quản trị người dùng, nội dung hoặc thống kê.
-- Chỉnh sửa thủ công nội dung từng ngày của kế hoạch.
-- Đa tiền tệ và bản địa hóa hoàn chỉnh.
-- Cam kết giá hoặc tính chính xác tuyệt đối của dữ liệu do AI sinh.
-
-## 7. Nguyên tắc nghiệp vụ
-
-| Mã    | Quy tắc                                                                                                |
-| ----- | ------------------------------------------------------------------------------------------------------ |
-| BR-01 | Email được chuẩn hóa bằng cách trim và chuyển thành chữ thường trước khi lưu hoặc tìm kiếm.            |
-| BR-02 | Email và username phải duy nhất.                                                                       |
-| BR-03 | Tài khoản mới ở trạng thái chưa kích hoạt và không được đăng nhập trước khi xác minh email.            |
-| BR-04 | Tài khoản bị khóa không được đăng nhập, dùng access token hoặc refresh token.                          |
-| BR-05 | Liên kết xác minh email chỉ được dùng một lần; gửi liên kết mới làm token trước đó mất hiệu lực.       |
-| BR-06 | Mật khẩu dài từ 8 đến 20 ký tự và chỉ được lưu dưới dạng bcrypt hash.                                  |
-| BR-07 | Refresh token chỉ lưu dưới dạng bcrypt hash. Backend không lưu token gốc.                              |
-| BR-08 | Đổi mật khẩu, reset mật khẩu hoặc đăng xuất làm tăng `refreshTokenVersion`, khiến token cũ bị thu hồi. |
-| BR-09 | Mỗi user và mỗi mục đích chỉ có một OTP chưa dùng mới nhất; OTP cũ bị xóa khi tạo OTP mới.             |
-| BR-10 | OTP gồm đúng sáu chữ số, được hash, có hạn sử dụng và chỉ được dùng một lần.                           |
-| BR-11 | Yêu cầu quên mật khẩu và gửi lại xác minh không được tiết lộ email có tồn tại hay không.               |
-| BR-12 | Ngân sách đầu vào tối thiểu 100.000 VNĐ và tối đa 1 tỷ VNĐ.                                            |
-| BR-13 | Ngân sách có thể là tổng đoàn (`total`) hoặc trên mỗi người (`per_person`).                            |
-| BR-14 | Số người từ 1 đến 100; số ngày từ 1 đến 14; số đêm từ 0 đến 14.                                        |
-| BR-15 | Nếu không nhập số đêm, hệ thống dùng `max(0, số ngày - 1)`.                                            |
-| BR-16 | Nếu không nhập điểm đến, AI được phép đề xuất điểm đến phù hợp.                                        |
-| BR-17 | Kế hoạch AI phải có đúng số ngày yêu cầu.                                                              |
-| BR-18 | `totalEstimated` phải là số hữu hạn, không âm và không vượt tổng ngân sách của đoàn.                   |
-| BR-19 | Kế hoạch của user đăng nhập mặc định là riêng tư.                                                      |
-| BR-20 | Kế hoạch guest mặc định riêng tư, có TTL và chỉ truy cập/xóa được bằng guest token hợp lệ.             |
-| BR-21 | Chỉ chủ sở hữu mới được bật/tắt chia sẻ hoặc xóa kế hoạch.                                             |
-| BR-22 | Kế hoạch riêng tư chỉ chủ sở hữu có access token hợp lệ mới xem được.                                  |
-| BR-23 | Kế hoạch công khai có thể được xem mà không cần đăng nhập.                                             |
-| BR-24 | `userId` không được trả ra trong JSON của kế hoạch.                                                    |
-
-## 8. Hành trình người dùng chính
-
-### 8.1. Khách tạo kế hoạch
-
-1. Khách nhập ngân sách, số người, điểm xuất phát, số ngày và các tùy chọn.
-2. Backend kiểm tra dữ liệu đầu vào và giới hạn tần suất.
-3. Backend quy đổi ngân sách tổng nếu người dùng nhập ngân sách trên mỗi người.
-4. Gemini tạo kế hoạch theo JSON Schema.
-5. Backend kiểm tra cấu trúc cơ bản, số ngày và tổng ngân sách.
-6. Kế hoạch được lưu không có `userId`, `isPublic = false` và có thời hạn.
-7. API trả về ID, chi tiết và guest token một lần để truy cập, xóa hoặc claim.
-
-### 8.2. Đăng ký và xác minh tài khoản
-
-1. Người dùng gửi email, username, mật khẩu và tên.
-2. Backend kiểm tra tính duy nhất và hash mật khẩu.
-3. Tài khoản được tạo với `isActive = false`.
-4. Backend tạo mã nhận dạng xác minh dùng một lần, lưu bản hash và gửi email.
-5. Người dùng mở liên kết xác minh.
-6. Backend xác thực JWT và mã dùng một lần, sau đó kích hoạt tài khoản.
-7. Người dùng có thể đăng nhập.
-
-### 8.3. Người dùng tạo và quản lý kế hoạch
-
-1. Người dùng đăng nhập để nhận access token và refresh token.
-2. Người dùng tạo kế hoạch với access token.
-3. Kế hoạch được gắn với user và mặc định riêng tư.
-4. Người dùng xem lịch sử tại `my-trips`.
-5. Người dùng có thể bật chia sẻ để kế hoạch xuất hiện trong danh sách công khai.
-6. Người dùng có thể tắt chia sẻ hoặc xóa kế hoạch.
-
-### 8.4. Quên mật khẩu
-
-1. Người dùng nhập email.
-2. API luôn trả thông báo trung tính.
-3. Nếu email tồn tại, backend tạo OTP sáu chữ số, lưu bản hash và gửi email.
-4. Người dùng xác minh OTP để nhận reset token thời hạn ngắn.
-5. Người dùng gửi mật khẩu mới kèm reset token.
-6. Backend đổi mật khẩu và tăng token version.
-7. Reset token, access token và refresh token cũ không còn sử dụng được.
-
-## 9. Epic và yêu cầu sản phẩm
-
-### EPIC-01: Quản lý danh tính
-
-- PR-01: Người dùng có thể đăng ký bằng email duy nhất.
-- PR-02: Người dùng phải xác minh email trước khi đăng nhập.
-- PR-03: Người dùng có thể gửi lại email xác minh.
-- PR-04: Người dùng đã kích hoạt có thể đăng nhập và nhận hai loại token.
-- PR-05: Người dùng có thể làm mới access token bằng refresh token hợp lệ.
-- PR-06: Người dùng có thể đăng xuất và thu hồi token hiện tại.
-- PR-07: Tài khoản bị khóa hoặc chưa kích hoạt không được truy cập tài nguyên bảo vệ.
-
-### EPIC-02: Hồ sơ và mật khẩu
-
-- PR-08: Người dùng có thể xem hồ sơ của chính mình.
-- PR-09: Người dùng có thể cập nhật các trường hồ sơ được cho phép.
-- PR-10: Người dùng có thể đổi mật khẩu sau khi nhập đúng mật khẩu cũ.
-- PR-11: Người dùng có thể khôi phục mật khẩu bằng OTP và reset token.
-- PR-12: Mọi token cũ bị thu hồi sau thay đổi mật khẩu.
-
-### EPIC-03: Lập kế hoạch bằng AI
-
-- PR-13: Khách và user đều có thể tạo kế hoạch.
-- PR-14: Đầu vào hỗ trợ ngân sách tổng hoặc ngân sách trên mỗi người.
-- PR-15: AI trả về điểm đến, phân bổ ngân sách, lịch trình, địa điểm gợi ý và mẹo du lịch.
-- PR-16: Backend từ chối kết quả sai số ngày hoặc vượt ngân sách.
-- PR-17: Hệ thống lưu cả tiêu chí đầu vào và kết quả AI.
-
-### EPIC-04: Lịch sử và chia sẻ
-
-- PR-18: User xem được lịch sử cá nhân theo trang.
-- PR-19: Mọi người xem được danh sách kế hoạch công khai theo trang.
-- PR-20: Chủ sở hữu kiểm soát trạng thái chia sẻ.
-- PR-21: Chủ sở hữu xóa được kế hoạch của mình.
-- PR-22: Người không phải chủ sở hữu không truy cập được kế hoạch riêng tư.
-
-### EPIC-05: Vận hành và chất lượng
-
-- PR-23: Hệ thống cung cấp health check.
-- PR-24: API có validation và rate limiting.
-- PR-25: CI chạy unit test khi có PR vào `dev` hoặc `main`.
-- PR-26: CI chính chạy lint, unit test, E2E và build.
-- PR-27: Docker publish chỉ chạy khi được kích hoạt thủ công.
-
-## 10. Tiêu chí nghiệm thu cấp sản phẩm
-
-### 10.1. Tài khoản
-
-- Không thể đăng ký hai tài khoản cùng email hoặc username.
-- Không thể đăng nhập khi chưa xác minh email.
-- Liên kết xác minh không thể dùng lần thứ hai.
-- Refresh token sai, hết hạn, đã bị thay thế hoặc sai version phải bị từ chối.
-- Sau đổi/reset mật khẩu, access token cũ không truy cập được profile.
-
-### 10.2. Lập kế hoạch
-
-- Payload không hợp lệ bị trả lỗi 400 trước khi gọi Gemini.
-- Kết quả lưu có đầy đủ destination, budget breakdown, itinerary, recommended spots và travel tips.
-- Số phần tử itinerary bằng số ngày yêu cầu.
-- Tổng chi phí không vượt ngân sách tổng.
-- Kế hoạch guest và kế hoạch user đều riêng tư mặc định; chỉ owner mới bật công khai.
-
-### 10.3. Phân quyền
-
-- Anonymous xem được kế hoạch công khai.
-- Anonymous hoặc user khác nhận lỗi khi xem kế hoạch riêng tư.
-- User khác không thể chia sẻ hoặc xóa kế hoạch không thuộc sở hữu.
-- `userId` không xuất hiện trong JSON trả về của kế hoạch.
-
-### 10.4. Chất lượng phát hành
-
-- Lint và build thành công.
-- Toàn bộ unit test và E2E test thành công.
-- Không có dependency vulnerability mức đã biết tại thời điểm kiểm tra.
-- PR vào `dev` hoặc `main` kích hoạt action unit test.
-
-## 11. Ràng buộc và giả định
-
-- Chất lượng nội dung phụ thuộc Gemini và độ rõ ràng của đầu vào.
-- Chi phí, địa chỉ và giờ hoạt động do AI cung cấp chỉ mang tính tham khảo.
-- Hệ thống không gọi nguồn giá hoặc bản đồ theo thời gian thực.
-- Người dùng cần tự kiểm tra thông tin quan trọng trước chuyến đi.
-- Một tài khoản chỉ lưu một refresh token đang hoạt động tại một thời điểm; đăng nhập mới có thể làm refresh token cũ không dùng được.
-- Rate limit hiện lưu trong bộ nhớ tiến trình, phù hợp triển khai một instance; khi scale ngang cần kho dùng chung như Redis.
-- Email cần SMTP hoặc Resend được cấu hình đúng.
-- MongoDB và Gemini là phụ thuộc ngoài bắt buộc cho luồng lập kế hoạch đầy đủ.
-
-## 12. Rủi ro sản phẩm và hướng giảm thiểu
-
-| Rủi ro                                           | Mức độ     | Giảm thiểu hiện tại/đề xuất                                                  |
-| ------------------------------------------------ | ---------- | ---------------------------------------------------------------------------- |
-| AI tạo thông tin không chính xác                 | Cao        | JSON Schema, kiểm tra ngân sách/số ngày, hiển thị cảnh báo dữ liệu tham khảo |
-| Gemini hết quota hoặc gián đoạn                  | Cao        | Timeout rõ ràng, quota ngày theo user/IP; fallback model để bổ sung sau      |
-| Email không gửi được                             | Trung bình | Hỗ trợ SMTP/Resend; endpoint gửi lại; cần monitoring email                   |
-| Mất guest token                                  | Trung bình | Token chỉ trả một lần; user nên claim kế hoạch nếu muốn lưu lâu dài          |
-| Chi phí AI tăng khi bị lạm dụng                  | Cao        | Rate limit ngắn hạn và quota ngày lưu trong MongoDB theo user/IP             |
-| Rate limit mất hiệu lực khi nhiều instance       | Trung bình | Chuyển storage sang Redis khi scale ngang                                    |
-| Dữ liệu AI dạng object khó truy vấn sâu          | Thấp       | Phù hợp MVP; tách sub-schema khi cần analytics/search                        |
-| Không có quy trình moderation nội dung công khai | Trung bình | Bổ sung report/moderation/admin API trong roadmap                            |
-
-## 13. Roadmap đề xuất
-
-### Giai đoạn 1: Ổn định MVP
-
-- Bổ sung retry có backoff/circuit breaker khi lưu lượng thực tế yêu cầu.
-- Theo dõi latency, error rate và chi phí AI trên dashboard khi deploy public.
-- Hiển thị điều khoản rằng dữ liệu AI chỉ mang tính tham khảo.
-
-### Giai đoạn 2: Nâng trải nghiệm
-
-- Chỉnh sửa và sao chép kế hoạch.
-- Tìm kiếm/lọc kế hoạch công khai.
-- Yêu thích và lưu kế hoạch công khai vào tài khoản.
-- Xuất PDF hoặc lịch.
-- Hỗ trợ ảnh đại diện upload qua object storage.
-
-### Giai đoạn 3: Dữ liệu thực tế và cộng tác
-
-- Tích hợp bản đồ, khoảng cách và thời gian di chuyển.
-- Tích hợp nguồn địa điểm, giá và giờ hoạt động.
-- Cộng tác nhóm, chia sẻ bằng mã/link có quyền.
-- Notification và nhắc lịch.
-- Dashboard quản trị và moderation.
-
-## 14. Quyết định sản phẩm cần theo dõi
-
-| Mã     | Quyết định hiện tại             | Ghi chú                                                    |
-| ------ | ------------------------------- | ---------------------------------------------------------- |
-| DEC-01 | Guest plan riêng tư và có TTL   | Quản lý bằng guest token; có thể claim vào tài khoản       |
-| DEC-02 | Một refresh token cho mỗi user  | Đơn giản, chi phí thấp; chưa hỗ trợ quản lý nhiều thiết bị |
-| DEC-03 | Dùng Gemini Flash-Lite mặc định | Ưu tiên free tier/chi phí và structured output             |
-| DEC-04 | MongoDB lưu nested result       | Phù hợp dữ liệu kế hoạch linh hoạt và MVP                  |
-| DEC-05 | Email qua SMTP hoặc Resend      | Cho phép chọn nhà cung cấp theo chi phí triển khai         |
-
-## 15. Tài liệu liên quan
-
+| Attribute      | Value                                                  |
+| -------------- | ------------------------------------------------------ |
+| Version        | 1.0                                                    |
+| Status         | Baseline according to implemented product              |
+| Updated Date   | 2026-08-20                                             |
+| Scope          | Backend API `ai-travel-planner-server`                 |
+| Target Readers | Product Owner, Business Analyst, Developer, QA, DevOps |
+
+## 1. Product Summary
+
+AI Travel & Outing Planner is a backend service that empowers users to create customized travel and outing plans based on budget, group size, duration, origin, destination preference, and travel styles. The system leverages Google Gemini to generate structured output, subsequently persisting the itinerary to MongoDB for retrieval, sharing, or deletion.
+
+The product supports two usage modes:
+- **Guest Users:** Can generate itineraries without creating an account. Plans are private by default, time-limited with TTL, and managed via a single-use guest management token.
+- **Registered Users:** Can create persistent private plans, manage personal history, and toggle public sharing.
+
+In addition to itinerary generation, the platform provides full account lifecycle management: registration, email verification, authentication, token refresh, profile management, password changes, OTP-based password recovery, and secure logout.
+
+## 2. Background and Problem Statement
+
+Travelers frequently face difficulty aggregating information across multiple disparate sources to answer:
+- Where can I go with my current budget?
+- How should the budget be allocated across transport, lodging, meals, and entertainment?
+- How should morning, afternoon, and evening activities be organized for geographic coherence?
+- Where to eat, what to visit, and what precautions should be taken?
+- How can the generated plan be stored or shared with travel companions?
+
+Manual planning is time-consuming, prone to budget overruns, and often yields unrealistic itineraries. The product resolves these pain points by standardizing inputs, utilizing AI synthesis, and returning a consistent JSON structure for client applications.
+
+## 3. Product Vision
+
+Become a fast, intuitive, and cost-effective travel planning engine that transforms initial user criteria into an actionable itinerary within minutes.
+
+## 4. Product Goals
+
+### 4.1. Core Goals
+- Generate comprehensive travel itineraries from concise user inputs.
+- Ensure total AI estimated cost never exceeds the user's specified maximum budget.
+- Enable immediate guest access without upfront registration.
+- Enable registered users to save, view, share, and delete personal trip plans.
+- Secure user accounts via email verification, JWTs, token revocation, one-time OTPs, and rate limiting.
+- Maintain minimal operational cost through MongoDB, Gemini Flash-Lite, and lightweight containerization.
+
+### 4.2. Proposed Success Metrics
+
+| Code   | Metric                                | Initial Target                                 |
+| ------ | ------------------------------------- | ---------------------------------------------- |
+| KPI-01 | Trip Generation Request Success Rate  | ≥ 95% under normal Gemini/MongoDB availability |
+| KPI-02 | Budget Compliance Rate                | 100% post-backend validation                   |
+| KPI-03 | Duration (Days) Accuracy Rate         | 100% post-backend validation                   |
+| KPI-04 | Generation Latency (P95)              | ≤ 30s (dependent on Gemini API)                |
+| KPI-05 | Non-AI API Response Time (P95)        | ≤ 1s under standard load                       |
+| KPI-06 | CI Pipeline Pass Rate                 | 100% before PR merge                           |
+| KPI-07 | High/Critical Known Vulnerabilities   | 0 at release                                   |
+
+## 5. Target Personas
+
+### 5.1. Guest Visitors
+Users wishing to quickly test itinerary generation without signing up.
+- Needs: Input criteria, receive itinerary, view public trips, manage/delete plan using ID and guest token.
+- Limitations: No personal history dashboard, cannot toggle public sharing without claiming into an account, plans subject to TTL expiration.
+
+### 5.2. Registered Users
+Users seeking long-term plan management and privacy control.
+- Needs: Secure login, save private itineraries, paginated history (`my-trips`), toggle public sharing, delete own trips, manage profile and credentials.
+
+### 5.3. Operations & Admins
+The `admin` role exists in the schema for future administrative dashboards. Operations are presently handled via server logs, MongoDB management, and environment configurations.
+
+## 6. Product Scope
+
+### 6.1. In-Scope (Current Baseline)
+- Local account registration via email and password.
+- Single-use JWT email verification.
+- Account state-agnostic resend verification endpoint.
+- Login issuing access and refresh tokens.
+- Access token refresh flow.
+- Token revocation on password change, password reset, and logout (`refreshTokenVersion`).
+- Profile view and update endpoints.
+- OTP password recovery (6-digit one-time code + short-lived reset token).
+- Gemini structured output trip planning.
+- Backend duration and budget compliance validation.
+- MongoDB persistence for guest and user plans.
+- Paginated personal history and public itinerary feeds.
+- Access control for private itineraries.
+- Public sharing toggle and owner-based plan deletion.
+- System health checks (`/health`), Swagger/OpenAPI documentation (`/docs`).
+- Rate limiting, DTO validation, Helmet, CORS, and request logging.
+- Unit tests, E2E API tests, Docker setup, and GitHub Actions CI.
+
+### 6.2. Out-of-Scope (Current Phase)
+- Native mobile or web frontend implementations.
+- Direct booking / payments for flights, hotels, or restaurants.
+- Real-time pricing synchronization with external OTAs.
+- Turn-by-turn GPS navigation or live distance calculations.
+- Social OAuth logins (Google, Facebook, Apple).
+- Real-time collaborative editing.
+- Comments, reviews, ratings, and social follows.
+- Push notifications, SMS, or trip reminder calendars.
+- Admin portal APIs.
+- Multi-currency conversion (VNĐ standard).
+
+## 7. Business Rules
+
+| Code  | Rule                                                                                               |
+| ----- | -------------------------------------------------------------------------------------------------- |
+| BR-01 | Email addresses must be trimmed and converted to lowercase prior to storage or lookup.              |
+| BR-02 | Email and username must be unique across the platform.                                            |
+| BR-03 | New accounts are inactive (`isActive = false`) and cannot log in until email is verified.          |
+| BR-04 | Banned accounts cannot log in, refresh tokens, or access protected resources.                     |
+| BR-05 | Email verification tokens are single-use; requesting a new link invalidates previous tokens.       |
+| BR-06 | Passwords must be 8–20 characters and stored strictly as bcrypt hashes.                            |
+| BR-07 | Refresh tokens must be stored strictly as bcrypt hashes. Raw tokens are never persisted.          |
+| BR-08 | Password change, password reset, or logout increments `refreshTokenVersion`, invalidating tokens.  |
+| BR-09 | Only one active OTP per user per purpose is valid; requesting a new OTP deletes prior unused OTPs. |
+| BR-10 | OTPs consist of 6 numeric digits, are hashed, time-limited, and single-use.                        |
+| BR-11 | Forgot-password and resend-verification endpoints must return neutral responses (no email leak).   |
+| BR-12 | Input budget must be between 100,000 VNĐ and 1,000,000,000 VNĐ.                                    |
+| BR-13 | Budget can be provided as `total` or `per_person`.                                                 |
+| BR-14 | Group size: 1–100 people; Days: 1–14 days; Nights: 0–14 nights.                                    |
+| BR-15 | If nights are omitted, system defaults to `max(0, days - 1)`.                                      |
+| BR-16 | If destination preference is omitted, AI selects the optimal destination based on budget.         |
+| BR-17 | Generated itinerary must contain exactly the requested number of days.                             |
+| BR-18 | `totalEstimated` must be finite, non-negative, and not exceed the total group budget.              |
+| BR-19 | Registered user itineraries are private by default.                                                |
+| BR-20 | Guest itineraries are private by default, have TTL, and require a valid guest token to access.     |
+| BR-21 | Only the owner can toggle public sharing or delete a trip plan.                                    |
+| BR-22 | Private plans can only be accessed by the owner with a valid access token or guest manage token.   |
+| BR-23 | Public plans can be viewed without authentication.                                                 |
+| BR-24 | `userId` and `guestTokenHash` must never be exposed in client-facing JSON responses.               |
+
+## 8. Core User Journeys
+
+### 8.1. Guest Trip Planning
+1. Guest enters budget, group size, origin, duration, and preferences.
+2. Backend validates input and verifies daily guest quota.
+3. Gemini synthesizes structured itinerary.
+4. Backend verifies day count and budget constraints.
+5. Plan is saved with `userId = null`, `isPublic = false`, and expiration TTL.
+6. API returns itinerary details along with single-use `guest_manage_token`.
+
+### 8.2. Registration & Email Verification
+1. User submits email, username, password, and name.
+2. Backend verifies uniqueness, creates inactive user, hashes single-use verification JTI, and dispatches email.
+3. User opens verification link.
+4. Backend validates token and JTI, sets `isActive = true`, and clears JTI.
+5. User logs in.
+
+### 8.3. Authenticated Trip Planning & Management
+1. User logs in to receive access and refresh tokens.
+2. User generates plan with access token. Plan is linked to user account.
+3. User views paginated personal plans at `/trip-planner/my-trips`.
+4. User can toggle sharing at `/trip-planner/:id/share` to make it visible in public feed.
+5. User can delete owned plans.
+
+### 8.4. Password Recovery
+1. User submits email via `/auth/forgot-password`.
+2. API responds with neutral message. If user exists, generates 6-digit OTP and emails it.
+3. User verifies OTP at `/auth/forgot-password-verify` and receives a short-lived `reset_token`.
+4. User submits new password with reset token at `/auth/change-password-forgot`.
+5. Backend updates password, increments `refreshTokenVersion`, and invalidates all existing tokens.
+
+## 9. Epics & Product Requirements
+
+### EPIC-01: Identity & Access Management
+- PR-01: Users can register with a unique email and username.
+- PR-02: Email verification is required before login.
+- PR-03: Users can resend verification emails securely.
+- PR-04: Active users can authenticate and receive access/refresh tokens.
+- PR-05: Users can refresh access tokens using valid refresh tokens.
+- PR-06: Users can logout, revoking the active refresh token.
+- PR-07: Inactive or banned accounts are blocked from protected endpoints.
+
+### EPIC-02: Profile & Credentials
+- PR-08: Users can view their own profile.
+- PR-09: Users can update allowed profile fields (name, phone, bio, avatar, gender, birth date).
+- PR-10: Authenticated users can change password after validating old password.
+- PR-11: Users can recover forgotten passwords via OTP and reset token.
+- PR-12: All prior tokens are revoked upon password alteration.
+
+### EPIC-03: AI Trip Planning
+- PR-13: Both guests and authenticated users can generate trip plans.
+- PR-14: Supports total or per-person budget inputs.
+- PR-15: AI outputs destination info, budget breakdown, daily itineraries, recommended spots, and travel tips.
+- PR-16: Backend rejects AI results violating day count or budget limits.
+- PR-17: Stores both input criteria and generated plan.
+
+### EPIC-04: History & Sharing
+- PR-18: Users can view paginated personal trip history.
+- PR-19: Public trip plans can be viewed by anyone with pagination.
+- PR-20: Owners can toggle public/private status of plans.
+- PR-21: Owners and authorized guests can delete plans.
+- PR-22: Non-owners cannot access private plans.
+
+### EPIC-05: System Reliability & Quality
+- PR-23: Provides `/health` check endpoint.
+- PR-24: Enforces request validation and rate limiting.
+- PR-25: Automated CI runs unit tests, linter, E2E tests, and build verification.
+
+## 10. Product Acceptance Criteria
+
+### 10.1. Authentication
+- Duplicate email/username registration is blocked with 409 Conflict.
+- Unverified accounts cannot authenticate (400 Bad Request).
+- Verification links cannot be reused.
+- Invalid or revoked refresh tokens are rejected with 401 Unauthorized.
+
+### 10.2. Trip Planning
+- Invalid payload is rejected before reaching Gemini.
+- Saved plans contain destination, budget breakdown, itinerary, spots, and tips.
+- Number of itinerary days matches requested duration.
+- Total cost does not exceed budget limit.
+- `userId` is never leaked in response JSON.
+
+## 11. Known Constraints & Assumptions
+- Information generated by AI (prices, hours, addresses) is for reference.
+- One active refresh token is tracked per user account.
+- Rate limiting is in-memory for single-instance deployments (can scale to Redis).
+- MongoDB and Gemini API keys are mandatory external dependencies.
+
+## 12. Related Documents
 - [SRS – Software Requirements Specification](./SRS.md)
 - [API Documentation](./API.md)
 - [Project Structure & Architecture](./STRUCTURE.md)
-- [Environment example](../.env.example)

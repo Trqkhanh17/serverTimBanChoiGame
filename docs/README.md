@@ -1,24 +1,24 @@
 # AI Travel Planner Documentation
 
-Tài liệu trong thư mục này mô tả sản phẩm, nghiệp vụ, yêu cầu phần mềm, API và kiến trúc của backend.
+The documents in this directory describe the product vision, business rules, software requirements, API contracts, and architectural design of the backend service.
 
-| Tài liệu                    | Mục đích                                                                | Đối tượng chính                  |
+| Document                    | Purpose                                                                 | Primary Audience                 |
 | --------------------------- | ----------------------------------------------------------------------- | -------------------------------- |
-| [PRD](./PRD.md)             | Bài toán sản phẩm, phạm vi, personas, quy tắc nghiệp vụ, KPI, roadmap   | Product Owner, BA, Developer, QA |
-| [SRS](./SRS.md)             | Yêu cầu chức năng/phi chức năng, dữ liệu, bảo mật, lỗi và truy vết test | Developer, QA, DevOps            |
-| [API](./API.md)             | Endpoint, request/response và cách gọi API                              | Frontend, Mobile, Integration    |
-| [Structure](./STRUCTURE.md) | Cấu trúc source code và kiến trúc module                                | Developer, Reviewer              |
+| [PRD](./PRD.md)             | Product problem, scope, personas, business rules, KPIs, and roadmap     | Product Owner, BA, Developer, QA |
+| [SRS](./SRS.md)             | Functional/non-functional requirements, data schemas, security, tests   | Developer, QA, DevOps            |
+| [API](./API.md)             | Endpoints, request/response formats, and API invocation guidelines      | Frontend, Mobile, Integration    |
+| [Structure](./STRUCTURE.md) | Source code structure, modular architecture, and file conventions       | Developer, Reviewer              |
 
-## Thứ tự đọc đề xuất
+## Recommended Reading Order
 
-1. Đọc PRD để hiểu người dùng, bài toán và quy tắc nghiệp vụ.
-2. Đọc SRS để hiểu hành vi bắt buộc và tiêu chí kỹ thuật.
-3. Dùng API Documentation khi tích hợp frontend hoặc kiểm thử thủ công.
-4. Dùng Structure khi phát triển hoặc review code.
+1. Read the **PRD** to understand users, problem statements, and business rules.
+2. Read the **SRS** for technical requirements, data models, and edge cases.
+3. Refer to **API Documentation** when integrating frontend applications or manual testing.
+4. Consult **Structure** when extending codebase or performing code reviews.
 
-## Quy tắc cập nhật
+## Maintenance Rules
 
-- Thay đổi nghiệp vụ phải cập nhật PRD và mã quy tắc liên quan.
-- Thay đổi endpoint, validation, status code, schema hoặc quyền phải cập nhật SRS và API.
-- Thay đổi module/folder hoặc luồng phụ thuộc phải cập nhật Structure.
-- Mọi tài liệu phải phân biệt rõ chức năng đã triển khai với roadmap.
+- Any business logic change must update the PRD and related rule codes.
+- Any change to endpoints, validation, status codes, schemas, or permissions must update SRS and API docs.
+- Any change to modules, folders, or dependencies must update the Structure document.
+- All documents must clearly distinguish currently implemented features from the future roadmap.
