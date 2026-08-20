@@ -5,9 +5,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './auth/auth.module';
-import { GameProfileModule } from './modules/game-profile/game-profile.module';
-import { FriendModule } from './modules/friend/friend.module';
-import { MatchSearchModule } from './modules/match-search/match-search.module';
 import { OtpModule } from './modules/otp/otp.module';
 import { TripPlannerModule } from './modules/trip-planner/trip-planner.module';
 import { minutes, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -40,9 +37,6 @@ import { APP_GUARD } from '@nestjs/core';
     }),
     UsersModule,
     AuthModule,
-    GameProfileModule,
-    FriendModule,
-    MatchSearchModule,
     OtpModule,
     TripPlannerModule,
   ],

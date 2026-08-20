@@ -1,7 +1,7 @@
 {
-  "name": "server",
+  "name": "ai-travel-planner-server",
   "version": "0.0.1",
-  "description": "",
+  "description": "AI Travel & Outing Planner Backend Server with NestJS and Google Gemini AI",
   "author": "",
   "private": true,
   "license": "UNLICENSED",

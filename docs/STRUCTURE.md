@@ -4,41 +4,40 @@
 
 ```
 src/
-├── auth/           # Authentication Module
-│   ├── dto/        # Data Transfer Objects for Auth (Login, Register, etc.)
-│   ├── passport/   # Passport strategies (JWT, Local) and Guards
-│   ├── auth.controller.ts # Handles HTTP requests for /auth
-│   ├── auth.module.ts     # Auth module definition
-│   └── auth.service.ts    # Business logic for Auth
+├── auth/                 # Authentication Module (JWT, Passport, Refresh Token)
+│   ├── dto/              # Data Transfer Objects for Auth (Login, Register, etc.)
+│   ├── passport/         # Passport strategies (JWT, Local) and Guards
+│   ├── auth.controller.ts
+│   ├── auth.module.ts
+│   └── auth.service.ts
 │
-├── common/         # Shared Resources
-│   ├── decorators/ # Custom decorators (e.g. @User())
-│   ├── filters/    # Exception filters
-│   ├── helpers/    # Utility functions (hash, compare, etc.)
-│   └── types/      # TypeScript type definitions
+├── common/               # Shared Resources & Utilities
+│   ├── constants/        # System constants (e.g. API_PREFIX)
+│   ├── helpers/          # Utility functions (hash, compare, etc.)
+│   ├── repositories/     # Generic abstract repository
+│   └── types/            # TypeScript type definitions
 │
-├── mail/           # Mail Module
-│   ├── templates/  # Handlebars email templates
-│   └── mail.service.ts # Service for sending emails
+├── mail/                 # Email Delivery Module (Nodemailer + Handlebars)
+│   ├── templates/        # Email templates
+│   └── mail.service.ts
 │
-├── modules/        # Feature Modules
-│   ├── users/      # User Management (CRUD, Profile)
-│   ├── match-search/ # Matchmaking Logic (Currently Boilerplate)
-│   ├── game-profile/ # Game Profile Management (Currently Boilerplate)
-│   ├── friend/     # Friend System (Currently Boilerplate)
-│   └── otp/        # OTP Management
+├── modules/              # Core Feature Modules
+│   ├── trip-planner/     # 🚀 AI Travel & Outing Planner Module
+│   │   ├── dto/          # CreateTripPlanDto, GeneratedTripPlanResult
+│   │   ├── schemas/      # TripPlan MongoDB Schema
+│   │   ├── services/     # GeminiAiService, TripPlannerService
+│   │   ├── trip-planner.controller.ts
+│   │   └── trip-planner.module.ts
+│   ├── users/            # User Management & Profiles
+│   └── otp/              # OTP Generation & Verification
 │
-├── app.module.ts   # Root Module (Imports all other modules)
-└── main.ts         # Application Entry Point
+├── app.controller.ts     # Root API Directory
+├── app.module.ts         # Root AppModule
+└── main.ts               # Application Bootstrap
 ```
 
 ## Architecture Overview
 
-- **Modular Monolith:** The application is structured into modules based on features (`auth`, `users`, `match-search`).
-- **Dependency Injection:** Uses NestJS's DI system to manage dependencies between services and controllers.
-- **Data Access:** Uses Mongoose to interact with MongoDB. Schemas are defined in each module (e.g., `users/schemas/user.schema.ts`).
-- **Authentication Flow:**
-  1.  User logs in via `/auth/login`.
-  2.  Server validates credentials and issues an `access_token` (short-lived) and `refresh_token` (long-lived).
-  3.  Client sends `access_token` in `Authorization` header for protected routes.
-  4.  When `access_token` expires, client uses `refresh_token` at `/auth/refresh` to get a new pair.
+- **Modular Architecture:** Hệ thống được chia tách thành các module độc lập theo tính năng (`auth`, `users`, `trip-planner`).
+- **AI Integration (Google Gemini SDK):** Tích hợp Google GenAI SDK với cơ chế **JSON Schema Structured Output** giúp AI phản hồi dữ liệu cấu trúc chặt chẽ, không bị lỗi cú pháp.
+- **Data Persistence:** Sử dụng MongoDB và Mongoose để lưu trữ thông tin người dùng và các kế hoạch du lịch phức tạp dạng JSON lồng nhau (nested document).
