@@ -6,26 +6,26 @@ Base URL: `/api/v1`
 
 ## 1. AI Trip Planner (`/trip-planner`)
 
-### 1.1. Tạo kế hoạch du lịch bằng AI
+### 1.1. Generate AI Trip Plan
 
 - **URL:** `/trip-planner/generate`
 - **Method:** `POST`
-- **Headers:** `Authorization: Bearer <access_token>` _(Tùy chọn)_
-- Có access token: kế hoạch được gắn với user và mặc định riêng tư.
-- Không có access token: kế hoạch là riêng tư, tự hết hạn và chỉ mở được bằng `X-Guest-Token`.
+- **Headers:** `Authorization: Bearer <access_token>` _(Optional)_
+  - With access token: The trip plan is permanently linked to the user account (private by default).
+  - Without access token: The trip plan is created as a temporary guest plan (expires after configured TTL, accessible only via `X-Guest-Token`).
 - **Body:**
   ```json
   {
     "budget": 5000000,
     "budgetType": "total",
     "numberOfPeople": 4,
-    "originLocation": "TP. Hồ Chí Minh",
-    "destinationPreference": "Vũng Tàu",
-    "tripStyles": ["Nghỉ dưỡng", "Ẩm thực hải sản", "Check-in sống ảo"],
+    "originLocation": "Ho Chi Minh City",
+    "destinationPreference": "Vung Tau",
+    "tripStyles": ["Relaxation", "Seafood Dining", "Sightseeing"],
     "days": 2,
     "nights": 1,
-    "transportationPreference": "Xe máy / Ô tô tự lái",
-    "specialNotes": "Muốn ăn hải sản tươi ngon giá hợp lý và cafe ngắm hoàng hôn"
+    "transportationPreference": "Self-drive Motorbike / Car",
+    "specialNotes": "Fresh seafood at reasonable prices and sunset coffee"
   }
   ```
 - **Response (201):**
@@ -35,9 +35,9 @@ Base URL: `/api/v1`
     "data": {
       "_id": "67b6a1e8c9d...",
       "destination": {
-        "name": "Vũng Tàu",
-        "tagline": "Chuyến đi biển 2N1Đ thư giãn và thưởng thức hải sản",
-        "reason": "Phù hợp hoàn hảo với ngân sách 5 triệu cho 4 người xuất phát từ TP.HCM"
+        "name": "Vung Tau",
+        "tagline": "2D1N coastal relaxation and seafood experience",
+        "reason": "Perfect fit for a 5,000,000 VND budget for 4 people departing from HCMC"
       },
       "budgetBreakdown": {
         "totalEstimated": 4800000,
@@ -52,11 +52,11 @@ Base URL: `/api/v1`
       "itinerary": [
         {
           "day": 1,
-          "title": "Khám phá biển và ẩm thực chợ đêm",
+          "title": "Beach exploration and night market culinary tour",
           "morning": {
             "time": "07:30 - 11:30",
-            "activity": "Di chuyển từ TP.HCM đến Vũng Tàu, ăn sáng bánh khọt Cô Ba",
-            "places": ["Bánh khọt Cô Ba Vũng Tàu"],
+            "activity": "Travel from HCMC to Vung Tau, breakfast at Co Ba banh khot",
+            "places": ["Co Ba Vung Tau Banh Khot"],
             "estimatedCost": 250000
           },
           "afternoon": { ... },
@@ -70,11 +70,11 @@ Base URL: `/api/v1`
       "travelTips": [ ... ],
       "isPublic": false
     },
-    "guest_manage_token": "token-chỉ-trả-một-lần-cho-guest"
+    "guest_manage_token": "single-use-token-for-guests"
   }
   ```
 
-### 1.2. Lấy danh sách chuyến đi của User
+### 1.2. Get User's Trip History
 
 - **URL:** `/trip-planner/my-trips?page=1&limit=10`
 - **Method:** `GET`
@@ -90,17 +90,17 @@ Base URL: `/api/v1`
   }
   ```
 
-### 1.3. Danh sách lịch trình công khai
+### 1.3. Get Public Trip Plans
 
 - **URL:** `/trip-planner/public?page=1&limit=10`
 - **Method:** `GET`
-- **Auth:** Không yêu cầu
+- **Auth:** Not required (Public)
 
-### 1.4. Xem chi tiết kế hoạch theo ID
+### 1.4. Get Trip Plan Detail by ID
 
 - **URL:** `/trip-planner/:id`
 - **Method:** `GET`
-- **Headers:** `Authorization: Bearer <access_token>` cho owner, hoặc `X-Guest-Token` cho kế hoạch guest.
+- **Headers:** `Authorization: Bearer <access_token>` for owner, or `X-Guest-Token: <token>` for guest plan.
 - **Response (200):**
   ```json
   {
@@ -108,19 +108,19 @@ Base URL: `/api/v1`
   }
   ```
 
-### 1.5. Nhận kế hoạch guest vào tài khoản
+### 1.5. Claim Guest Trip Plan
 
 - **URL:** `/trip-planner/:id/claim`
 - **Method:** `POST`
-- **Headers:** `Authorization: Bearer <access_token>` và `X-Guest-Token: <guest_manage_token>`
+- **Headers:** `Authorization: Bearer <access_token>` and `X-Guest-Token: <guest_manage_token>`
 
-### 1.6. Xem quota AI
+### 1.6. Check AI Quota Status
 
 - **URL:** `/trip-planner/quota`
 - **Method:** `GET`
-- **Auth:** Tùy chọn
+- **Auth:** Optional (`Authorization: Bearer <access_token>` for user quota, IP for guest quota)
 
-### 1.7. Bật/tắt chia sẻ cho bạn bè
+### 1.7. Toggle Public Sharing
 
 - **URL:** `/trip-planner/:id/share`
 - **Method:** `PATCH`
@@ -134,11 +134,11 @@ Base URL: `/api/v1`
   }
   ```
 
-### 1.8. Xóa kế hoạch du lịch
+### 1.8. Delete Trip Plan
 
 - **URL:** `/trip-planner/:id`
 - **Method:** `DELETE`
-- **Headers:** `Authorization: Bearer <access_token>` cho owner, hoặc `X-Guest-Token` cho guest.
+- **Headers:** `Authorization: Bearer <access_token>` for owner, or `X-Guest-Token: <token>` for guest plan.
 - **Response (200):**
   ```json
   {
@@ -150,7 +150,7 @@ Base URL: `/api/v1`
 
 ## 2. Authentication (`/auth`)
 
-### 2.1. Đăng ký
+### 2.1. Register
 
 - **URL:** `/auth/register`
 - **Method:** `POST`
@@ -163,9 +163,9 @@ Base URL: `/api/v1`
     "name": "Nguyen Van A"
   }
   ```
-- Tài khoản phải xác minh email trước khi đăng nhập. Endpoint này không cấp token.
+- Newly registered accounts require email verification before login. This endpoint does not issue tokens.
 
-### 2.2. Đăng nhập
+### 2.2. Login
 
 - **URL:** `/auth/login`
 - **Method:** `POST`
@@ -176,27 +176,28 @@ Base URL: `/api/v1`
     "password": "password123"
   }
   ```
+- **Response (200):** Returns `access_token`, `refresh_token`, and `user` payload.
 
-### 2.3. Lấy thông tin cá nhân
+### 2.3. Get Profile
 
 - **URL:** `/auth/profile`
 - **Method:** `GET`
 - **Headers:** `Authorization: Bearer <access_token>`
 
-### 2.4. Cập nhật thông tin cá nhân
+### 2.4. Update Profile
 
 - **URL:** `/auth/profile`
 - **Method:** `PATCH`
 - **Headers:** `Authorization: Bearer <access_token>`
-- **Body:** Có thể gửi một hoặc nhiều trường `name`, `phone`, `avatarUrl`, `bio`, `gender`, `birthDate`.
+- **Body:** Accepts one or more of `name`, `phone`, `avatarUrl`, `bio`, `gender`, `birthDate`.
 
-### 2.5. Cấp lại access_token
+### 2.5. Refresh Access Token
 
 - **URL:** `/auth/refresh`
 - **Method:** `POST`
 - **Headers:** `Authorization: Bearer <refresh_token>`
 
-### 2.6. Đổi mật khẩu
+### 2.6. Change Password (Authenticated)
 
 - **URL:** `/auth/change-password`
 - **Method:** `PATCH`
@@ -210,18 +211,18 @@ Base URL: `/api/v1`
   }
   ```
 
-### 2.7. Đăng xuất
+### 2.7. Logout
 
 - **URL:** `/auth/logout`
 - **Method:** `DELETE`
 - **Headers:** `Authorization: Bearer <refresh_token>`
 
-### 2.8. Xác minh và gửi lại email
+### 2.8. Email Verification
 
-- `GET /auth/verify-email?token=<verification_token>`
-- `POST /auth/resend-verification` với body `{ "email": "user@example.com" }`
+- `GET /auth/verify-email?token=<verification_token>`: Verifies the email link.
+- `POST /auth/resend-verification`: Resends verification link with `{ "email": "user@example.com" }`.
 
-### 2.9. Quên mật khẩu
+### 2.9. Forgot Password Flow
 
 1. `POST /auth/forgot-password`
    ```json
@@ -231,7 +232,7 @@ Base URL: `/api/v1`
    ```json
    { "email": "user@example.com", "otpCode": "123456" }
    ```
-   Response trả về `reset_token` tồn tại trong thời gian ngắn.
+   Response returns a short-lived `reset_token`.
 3. `PATCH /auth/change-password-forgot`
    ```json
    {
@@ -241,10 +242,11 @@ Base URL: `/api/v1`
    }
    ```
 
-Reset token chỉ dùng được một lần. Đổi mật khẩu hoặc đăng xuất sẽ thu hồi các access/refresh token cũ.
+Changing password or logging out immediately revokes all previously issued tokens via `refreshTokenVersion`.
 
 ---
 
 ## 3. System
 
-- `GET /health`: Trả về trạng thái API, kết nối MongoDB và cấu hình Gemini.
+- `GET /health`: Returns service health, database connectivity status, and Gemini configuration status.
+- `GET /docs`: Swagger/OpenAPI interactive API documentation.

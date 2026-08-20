@@ -10,24 +10,25 @@ src/
 │   ├── auth.controller.ts
 │   ├── auth.module.ts
 │   ├── auth.service.ts
-│   └── services/         # Token, email verification, password reset
+│   └── services/         # Token, email verification, password reset sub-services
 │
 ├── common/               # Shared Resources & Utilities
 │   ├── constants/        # System constants (e.g. API_PREFIX)
-│   ├── helpers/          # Utility functions (hash, compare, etc.)
-│   ├── repositories/     # Typed BaseRepository for MongoDB
+│   ├── helpers/          # Utility functions (hash, compare, error helpers)
+│   ├── repositories/     # Typed BaseRepository for MongoDB operations
+│   ├── validators/       # Custom class-validator constraints
 │   └── types/            # TypeScript type definitions
 │
-├── config/               # Environment validation and shared app bootstrap
+├── config/               # Environment validation and shared application setup
 │
-├── mail/                 # Email Delivery Module (SMTP hoặc Resend API)
+├── mail/                 # Email Delivery Module (SMTP or Resend API)
 │   └── mail.service.ts
 │
 ├── modules/              # Core Feature Modules
 │   ├── trip-planner/     # 🚀 AI Travel & Outing Planner Module
-│   │   ├── dto/          # CreateTripPlanDto, GeneratedTripPlanResult
+│   │   ├── dto/          # CreateTripPlanDto, Query DTOs, Response DTOs
 │   │   ├── schemas/      # TripPlan, AI quota and runtime response validation
-│   │   ├── services/     # Gemini, prompt builder and daily quota
+│   │   ├── services/     # Gemini AI, prompt builder, and daily quota service
 │   │   ├── trip-planner.controller.ts
 │   │   └── trip-planner.module.ts
 │   ├── users/            # User Management & Profiles
@@ -40,10 +41,10 @@ src/
 
 ## Architecture Overview
 
-- **Modular Architecture:** Hệ thống được chia tách thành các module độc lập theo tính năng (`auth`, `users`, `trip-planner`).
-- **AI Integration (Google Gemini SDK):** Tích hợp Google GenAI SDK với cơ chế **JSON Schema Structured Output** giúp AI phản hồi dữ liệu cấu trúc chặt chẽ, không bị lỗi cú pháp.
-- **Data Persistence:** Sử dụng MongoDB và Mongoose để lưu trữ thông tin người dùng và các kế hoạch du lịch phức tạp dạng JSON lồng nhau (nested document).
-- **MVP Hardening:** Guest plan có token/TTL, quota AI theo ngày, external timeout, request ID, security headers và Swagger/OpenAPI.
+- **Modular Architecture:** The system is decomposed into feature-driven, loosely coupled modules (`auth`, `users`, `otp`, `trip-planner`, `mail`).
+- **AI Integration (Google Gemini SDK):** Integrates Google GenAI SDK with **JSON Schema Structured Outputs** to guarantee syntactically valid and predictable AI responses.
+- **Data Persistence:** Uses MongoDB with Mongoose to store user records, AI quota buckets, and nested trip plans.
+- **Production Hardening:** Guest plan management with single-use tokens & TTL, HMAC-SHA256 daily AI quotas, external request timeouts, request ID tracking, security headers (Helmet), compression, and Swagger/OpenAPI documentation.
 
 ## Related Documents
 
