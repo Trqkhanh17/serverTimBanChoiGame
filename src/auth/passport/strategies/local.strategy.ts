@@ -30,6 +30,6 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
       throw new BadRequestException(
         'Your account has been locked. Please contact support for more details',
       );
-    return user as AuthUser;
+    return user;
   }
 }

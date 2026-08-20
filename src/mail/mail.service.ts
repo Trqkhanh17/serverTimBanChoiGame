@@ -13,10 +13,10 @@ export class MailService {
     try {
       await this.mailerService.sendMail({
         to: email,
-        subject: 'Email Verification – AOV Squad Finder',
+        subject: 'Email Verification – AI Travel Planner',
         template: 'verify-account',
         context: {
-          appName: 'AOV Squad Finder',
+          appName: 'AI Travel Planner',
           name: ctx?.name ?? 'You',
           verifyUrl,
           expiresIn: ctx?.expiresIn ?? 15,
@@ -36,10 +36,10 @@ export class MailService {
     try {
       await this.mailerService.sendMail({
         to: email,
-        subject: 'Your OTP Code to forgot password – AOV Squad Finder',
+        subject: 'Your OTP Code to reset password – AI Travel Planner',
         template: 'forgot-password',
         context: {
-          appName: 'AOV Squad Finder',
+          appName: 'AI Travel Planner',
           name: ctx?.name ?? 'You',
           otpCode,
           expiresIn: ctx?.expiresIn ?? 5,

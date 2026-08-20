@@ -25,31 +25,13 @@ export class AppController {
             <li>GET /auth/verify-email</li>
           </ul>
         </li>
-        <li><strong>Friend</strong>
+        <li><strong>AI Trip Planner</strong>
           <ul>
-            <li>GET /friend</li>
-            <li>POST /friend</li>
-            <li>GET /friend/:id</li>
-            <li>PATCH /friend/:id</li>
-            <li>DELETE /friend/:id</li>
-          </ul>
-        </li>
-        <li><strong>Game Profile</strong>
-          <ul>
-            <li>GET /game-profile</li>
-            <li>POST /game-profile</li>
-            <li>GET /game-profile/:id</li>
-            <li>PATCH /game-profile/:id</li>
-            <li>DELETE /game-profile/:id</li>
-          </ul>
-        </li>
-        <li><strong>Match Search</strong>
-          <ul>
-            <li>GET /match-search</li>
-            <li>POST /match-search</li>
-            <li>GET /match-search/:id</li>
-            <li>PATCH /match-search/:id</li>
-            <li>DELETE /match-search/:id</li>
+            <li>POST /trip-planner/generate (Tạo kế hoạch du lịch AI)</li>
+            <li>GET /trip-planner/my-trips (Lịch sử chuyến đi của user)</li>
+            <li>GET /trip-planner/:id (Chi tiết kế hoạch)</li>
+            <li>PATCH /trip-planner/:id/share (Bật/tắt chia sẻ cho bạn bè)</li>
+            <li>DELETE /trip-planner/:id (Xóa kế hoạch)</li>
           </ul>
         </li>
       </ul>
