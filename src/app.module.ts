@@ -9,6 +9,7 @@ import { GameProfileModule } from './modules/game-profile/game-profile.module';
 import { FriendModule } from './modules/friend/friend.module';
 import { MatchSearchModule } from './modules/match-search/match-search.module';
 import { OtpModule } from './modules/otp/otp.module';
+import { TripPlannerModule } from './modules/trip-planner/trip-planner.module';
 import { minutes, ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 @Module({
@@ -43,6 +44,7 @@ import { APP_GUARD } from '@nestjs/core';
     FriendModule,
     MatchSearchModule,
     OtpModule,
+    TripPlannerModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

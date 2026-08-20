@@ -13,7 +13,7 @@ export class OtpRepository extends AbstractRepository<OtpDocument> {
     super(otpModel);
   }
 
-  async deleteMany(filterQuery: FilterQuery<OtpDocument>) {
+  async deleteMany(filterQuery: FilterQuery<OtpDocument>): Promise<any> {
     return this.otpModel.deleteMany(filterQuery).exec();
   }
 }
