@@ -4,22 +4,23 @@ Backend server for **AI Travel & Outing Planner**, built with [NestJS](https://n
 
 ## 🚀 Key Features
 
-- **AI Trip Planning:** Tự động phân tích ngân sách, số người, sở thích và đề xuất địa điểm, lịch trình chi tiết (Sáng/Trưa/Tối), quán ăn đặc sản và dự toán chi tiêu bằng Google Gemini.
-- **Structured Outputs:** Sử dụng JSON Schema để đảm bảo dữ liệu AI trả về chuẩn xác 100%.
-- **Lịch sử & Chia sẻ:** Lưu trữ lịch trình vào MongoDB, hỗ trợ xem lại và bật/tắt chia sẻ cho bạn bè.
-- **Authentication & Security:** JWT (Access Token & Refresh Token), Passport, Rate Limiting.
-- **Mailing System:** Nodemailer SMTP hoặc Resend HTTP API cho xác thực email và khôi phục mật khẩu.
+- **AI Trip Planning:** Automatically analyzes budget, group size, origin, preferences, and generates detailed itineraries (Morning/Afternoon/Evening), recommended dining spots, attractions, and budget allocation using Google Gemini.
+- **Structured Outputs:** Uses JSON Schema to ensure 100% structured and predictable AI responses.
+- **History & Sharing:** Stores trip plans in MongoDB, supporting history pagination, claiming guest plans, and toggling public/private sharing.
+- **Authentication & Security:** JWT (Access & Refresh Tokens), Bcrypt hashing, Passport, Token Revocation, and Throttler Rate Limiting.
+- **Mailing System:** Nodemailer SMTP or Resend HTTP API for email verification and OTP password recovery.
+- **Daily AI Quota:** Protects Gemini API consumption by enforcing daily usage quotas per user and per guest IP via HMAC-SHA256 tracking.
 
 ## 🛠️ Technologies
 
 - **Framework:** NestJS v11
 - **Runtime:** Node.js 24 LTS
 - **Language:** TypeScript v5.7
-- **Database:** MongoDB (via Mongoose)
+- **Database:** MongoDB (via Mongoose 8)
 - **AI Engine:** Google Gemini AI (`@google/genai`)
-- **Authentication:** JWT (Access Token & Refresh Token), Passport
-- **Email:** Nodemailer (SMTP) hoặc Resend HTTP API
-- **Rate Limiting:** @nestjs/throttler
+- **Authentication:** JWT (Access & Refresh Token), Passport
+- **Email:** Nodemailer (SMTP) or Resend HTTP API
+- **Rate Limiting:** `@nestjs/throttler`
 
 ## 📦 Installation & Setup
 
@@ -30,27 +31,30 @@ Backend server for **AI Travel & Outing Planner**, built with [NestJS](https://n
    cd ai-travel-planner-server
    ```
 
-2. **Cài đặt dependencies:**
+2. **Install dependencies:**
 
    ```bash
    npm ci
+   # or
+   pnpm install
    ```
 
-3. **Cấu hình môi trường (.env):**
+3. **Configure environment (.env):**
 
    ```bash
    cp .env.example .env
    ```
 
-   Cập nhật các biến quan trọng trong file `.env`:
+   Update the required variables in `.env`:
 
-   - `MONGODB_URI`: Đường dẫn kết nối MongoDB
-   - `GEMINI_API_KEY`: API Key lấy từ [Google AI Studio](https://aistudio.google.com/)
-   - `GEMINI_MODEL`: mặc định `gemini-3.5-flash-lite` để ưu tiên free tier và chi phí thấp
+   - `MONGODB_URI`: MongoDB connection string
+   - `GEMINI_API_KEY`: API Key from [Google AI Studio](https://aistudio.google.com/)
+   - `GEMINI_MODEL`: default `gemini-3.5-flash-lite` for optimal cost and performance
    - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
    - `JWT_EMAIL_VERIFY_SECRET`, `JWT_RESET_PASSWORD_SECRET`
+   - `BACKEND_BASE_URL`: Base URL of the backend service
 
-4. **Chạy server:**
+4. **Run server:**
 
    ```bash
    # Development
@@ -60,7 +64,7 @@ Backend server for **AI Travel & Outing Planner**, built with [NestJS](https://n
    npm run build
    npm run start:prod
 
-   # Kiểm tra chất lượng
+   # Quality & Tests
    npm run lint
    npm test
    npm run test:e2e
@@ -72,26 +76,29 @@ Base URL: `/api/v1`
 
 ### 1. AI Trip Planner
 
-- `POST /trip-planner/generate`: Sinh kế hoạch du lịch & ăn chơi bằng AI (hỗ trợ cả khách vãng lai và user đăng nhập).
-- `GET /trip-planner/my-trips`: Lấy danh sách lịch sử chuyến đi của user.
-- `GET /trip-planner/public`: Lấy danh sách lịch trình được chia sẻ công khai.
-- `GET /trip-planner/:id`: Xem chi tiết kế hoạch theo ID.
-- `PATCH /trip-planner/:id/share`: Bật/tắt chế độ chia sẻ công khai cho bạn bè.
-- `DELETE /trip-planner/:id`: Xóa kế hoạch của user.
+- `POST /trip-planner/generate`: Generate AI trip plan (supports both guests and authenticated users).
+- `GET /trip-planner/my-trips`: Get user's trip history with pagination.
+- `GET /trip-planner/public`: Get publicly shared trip plans with pagination.
+- `GET /trip-planner/quota`: Check remaining AI generation quota for user or IP.
+- `GET /trip-planner/:id`: Get detailed trip plan by ID.
+- `POST /trip-planner/:id/claim`: Claim a guest trip plan into user account.
+- `PATCH /trip-planner/:id/share`: Toggle public sharing status.
+- `DELETE /trip-planner/:id`: Delete a trip plan (owner or guest with token).
 
 ### 2. Authentication & Users
 
-- `POST /auth/register`: Đăng ký tài khoản.
-- `POST /auth/login`: Đăng nhập lấy access_token và refresh_token.
-- `GET /auth/profile`: Lấy thông tin cá nhân.
-- `PATCH /auth/profile`: Cập nhật thông tin cá nhân.
-- `POST /auth/refresh`: Cấp mới access_token.
-- `POST /auth/forgot-password`: Gửi OTP quên mật khẩu.
-- `POST /auth/forgot-password-verify`: Xác minh OTP và nhận reset token.
-- `PATCH /auth/change-password-forgot`: Đặt mật khẩu mới bằng reset token.
-- `POST /auth/resend-verification`: Gửi lại email xác minh.
-- `PATCH /auth/change-password`: Đổi mật khẩu.
-- `DELETE /auth/logout`: Đăng xuất.
+- `POST /auth/register`: Register new account (requires email verification).
+- `GET /auth/verify-email`: Verify account via one-time email link.
+- `POST /auth/resend-verification`: Resend verification email.
+- `POST /auth/login`: Login and receive access & refresh tokens.
+- `GET /auth/profile`: Get current user profile.
+- `PATCH /auth/profile`: Update user profile.
+- `POST /auth/refresh`: Refresh access token using refresh token.
+- `PATCH /auth/change-password`: Change password (authenticated).
+- `POST /auth/forgot-password`: Request 6-digit OTP for password reset.
+- `POST /auth/forgot-password-verify`: Verify OTP and receive short-lived reset token.
+- `PATCH /auth/change-password-forgot`: Reset password using reset token.
+- `DELETE /auth/logout`: Logout and revoke refresh token.
 
 ## 📖 Documentation
 
@@ -101,8 +108,8 @@ Base URL: `/api/v1`
 - [API Documentation](docs/API.md)
 - [Project Structure & Architecture](docs/STRUCTURE.md)
 
-Health check: `GET /api/v1/health`.
+Health check: `GET /api/v1/health`
 
-Swagger/OpenAPI: `GET /api/v1/docs`.
+Swagger/OpenAPI documentation: `GET /api/v1/docs`
 
-Kế hoạch guest mặc định riêng tư, tự hết hạn sau thời gian cấu hình và được quản lý bằng token chỉ trả một lần. API cũng áp dụng quota tạo lịch trình theo ngày để bảo vệ free tier Gemini.
+Guest plans are private by default, expire automatically based on configured TTL, and are managed via a single-use guest management token.
